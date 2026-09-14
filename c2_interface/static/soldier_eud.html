@@ -1,0 +1,891 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>ATAK SOLDIER EUD | SIH26053</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700;800&family=Outfit:wght@600;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #040609;
+      --panel-bg: rgba(8, 14, 22, 0.94);
+      --border-hud: #1a293b;
+      --cyan: #00f0ff;
+      --green: #00ff88;
+      --red: #ff2233;
+      --amber: #ffaa00;
+      --mono: 'JetBrains Mono', monospace;
+      --sans: 'Outfit', sans-serif;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+    body {
+      background: var(--bg-dark);
+      color: #e2ecf7;
+      font-family: var(--mono);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* TOP STATUS BAR */
+    .top-bar {
+      height: 48px;
+      background: var(--panel-bg);
+      border-bottom: 1px solid var(--border-hud);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+      font-size: 13px;
+      z-index: 20;
+    }
+    .hud-title {
+      font-weight: 800;
+      letter-spacing: 1px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .top-right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .gps-fix {
+      color: var(--green);
+      font-size: 11px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .status-dot {
+      width: 7px;
+      height: 7px;
+      background: var(--green);
+      border-radius: 50%;
+      box-shadow: 0 0 8px var(--green);
+      animation: pulse 1.5s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.8); }
+    }
+
+    /* DYNAMIC COMPASS TAPE */
+    .compass-container {
+      height: 46px;
+      background: rgba(10, 18, 28, 0.96);
+      border-bottom: 1px solid var(--border-hud);
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 20;
+    }
+    .compass-tape-wrapper {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+    }
+    .compass-tape {
+      display: flex;
+      position: absolute;
+      top: 13px;
+      left: 50%;
+      white-space: nowrap;
+      transition: transform 0.05s linear;
+      font-size: 11px;
+      font-weight: 700;
+      color: #6d88a3;
+      user-select: none;
+    }
+    .compass-tape span {
+      display: inline-block;
+      width: 45px;
+      text-align: center;
+    }
+    .compass-marker {
+      position: absolute;
+      width: 2px;
+      height: 24px;
+      background: var(--cyan);
+      box-shadow: 0 0 8px var(--cyan);
+      top: 11px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 25;
+      pointer-events: none;
+    }
+    .heading-badge {
+      position: absolute;
+      bottom: 2px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0, 240, 255, 0.18);
+      border: 1px solid rgba(0, 240, 255, 0.4);
+      color: var(--cyan);
+      border-radius: 3px;
+      padding: 0 6px;
+      font-size: 10px;
+      font-weight: 800;
+      z-index: 25;
+      pointer-events: none;
+    }
+
+    /* STROBE THREAT ALERT BANNER */
+    .threat-banner {
+      background: var(--red);
+      color: white;
+      text-align: center;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 1.5px;
+      padding: 7px 12px;
+      display: none;
+      animation: banner-strobe 0.7s infinite alternate;
+      z-index: 20;
+    }
+    @keyframes banner-strobe {
+      from { background: #ff2233; }
+      to { background: #77000d; }
+    }
+
+    /* MAIN TACTICAL VIEWPORT */
+    .tactical-view {
+      flex: 1;
+      position: relative;
+      background: #020406;
+      overflow: hidden;
+    }
+    #soldierCanvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+    #cameraFeed {
+      display: none;
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      pointer-events: none;
+    }
+
+    /* TOAST NOTIFICATION */
+    .hud-toast {
+      position: absolute;
+      top: 14px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0, 255, 136, 0.2);
+      border: 1px solid var(--green);
+      color: var(--green);
+      font-size: 11px;
+      font-weight: 800;
+      padding: 6px 14px;
+      border-radius: 4px;
+      letter-spacing: 1px;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      z-index: 50;
+    }
+    .hud-toast.visible {
+      opacity: 1;
+    }
+
+    /* BOTTOM CONTROLS & DOCK */
+    .bottom-bar {
+      height: 72px;
+      background: var(--panel-bg);
+      border-top: 1px solid var(--border-hud);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      padding: 0 16px;
+      z-index: 20;
+    }
+    .btn-mode {
+      background: #111a26;
+      color: #7b94ad;
+      border: 1px solid var(--border-hud);
+      padding: 12px 20px;
+      font-family: var(--mono);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s ease;
+    }
+    .btn-mode:hover {
+      border-color: #2b4564;
+      color: #c0d5ec;
+    }
+    .btn-mode.active {
+      background: rgba(0, 240, 255, 0.16);
+      color: var(--cyan);
+      border-color: var(--cyan);
+      box-shadow: 0 0 12px rgba(0, 240, 255, 0.25);
+    }
+    .btn-mode:active {
+      transform: scale(0.97);
+    }
+
+    /* HUD OVERLAY INFO */
+    .hud-meta-overlay {
+      position: absolute;
+      bottom: 12px;
+      left: 14px;
+      background: rgba(8, 14, 22, 0.85);
+      border: 1px solid var(--border-hud);
+      border-radius: 4px;
+      padding: 6px 12px;
+      font-size: 10px;
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      z-index: 15;
+    }
+    .hud-meta-val {
+      color: var(--cyan);
+      font-weight: 700;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Hidden Camera Video element for Reticle mode -->
+  <video id="cameraFeed" playsinline autoplay muted></video>
+
+  <!-- TOP BAR -->
+  <div class="top-bar">
+    <div class="hud-title">
+      <span style="color: var(--cyan);">ATAK-EUD</span>
+      <span style="color: #627b94;">| MUM-T</span>
+      <span style="font-size: 10px; padding: 2px 6px; border-radius: 3px; background: rgba(0,255,136,0.15); color: var(--green); margin-left: 6px;">
+        DISMOUNTED SOLDIER
+      </span>
+    </div>
+    <div class="top-right">
+      <div class="gps-fix">
+        <div class="status-dot"></div>
+        <span>RTK-FIX (0.2m)</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- COMPASS TAPE -->
+  <div class="compass-container">
+    <div class="compass-marker"></div>
+    <div class="heading-badge" id="hdgVal">000° N</div>
+    <div class="compass-tape-wrapper">
+      <div class="compass-tape" id="compassTape"></div>
+    </div>
+  </div>
+
+  <!-- 50M WEAPONS ENGAGEMENT ZONE STROBE ALERT -->
+  <div class="threat-banner" id="strobeAlert">
+    WARNING: HOSTILE WITHIN 50M WEAPONS ENGAGEMENT ZONE
+  </div>
+
+  <!-- MAIN CANVAS -->
+  <div class="tactical-view">
+    <canvas id="soldierCanvas"></canvas>
+    <div class="hud-toast" id="hudToast">GYRO RE-ZEROED: 000° N</div>
+
+    <div class="hud-meta-overlay">
+      <div>MODE: <span class="hud-meta-val" id="dispMode">TACTICAL MAP (2D RADAR)</span></div>
+      <div>HEADING: <span class="hud-meta-val" id="dispHeading">000° NORTH</span></div>
+      <div>THREATS IN 50M WEZ: <span class="hud-meta-val" style="color: var(--red);" id="dispThreatCount">0</span></div>
+      <div id="dispTargetLocked" style="display: none;">DESIGNATED: <span class="hud-meta-val" id="dispDesignatedName">--</span></div>
+    </div>
+  </div>
+
+  <!-- BOTTOM CONTROL BAR -->
+  <div class="bottom-bar">
+    <button class="btn-mode active" id="btnMap">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/>
+      </svg>
+      <span>TACTICAL MAP</span>
+    </button>
+    <button class="btn-mode" id="btnReticle">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="9"/><line x1="12" y1="3" x2="12" y2="7"/><line x1="12" y1="17" x2="12" y2="21"/><line x1="3" y1="12" x2="7" y2="12"/><line x1="17" y1="12" x2="21" y2="12"/><circle cx="12" cy="12" r="2"/>
+      </svg>
+      <span>CAMERA RETICLE</span>
+    </button>
+    <button class="btn-mode" id="btnCalibrate">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+      </svg>
+      <span>CALIBRATE GYRO</span>
+    </button>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('soldierCanvas');
+    const ctx = canvas.getContext('2d');
+    const video = document.getElementById('cameraFeed');
+
+    let currentMode = 'map'; // 'map' or 'reticle'
+    let currentHeading = 0.0;
+    let headingOffset = 0.0;
+    let cameraPitch = 0.0; // in degrees (-30 to +30)
+    let threats = [];
+    let designatedStructure = null;
+    let cameraStream = null;
+    let isCameraActive = false;
+
+    // Desktop mouse interaction for heading rotation & pitch
+    let isDraggingView = false;
+    let dragStartPos = { x: 0, y: 0 };
+    let dragStartHeading = 0;
+    let dragStartPitch = 0;
+
+    // Build Continuous Compass Tape (3x repeat for seamless wrap-around)
+    const tapeEl = document.getElementById('compassTape');
+    const headings = [
+      'N', '015', '030', '045', '060', '075', 'E', '105', '120', '135', '150', '165',
+      'S', '195', '210', '225', '240', '255', 'W', '285', '300', '315', '330', '345'
+    ];
+    let tapeHTML = '';
+    for (let r = 0; r < 3; r++) {
+      tapeHTML += headings.map(h => `<span>${h}</span>`).join('');
+    }
+    tapeEl.innerHTML = tapeHTML;
+
+    function resize() {
+      canvas.width = canvas.parentElement.clientWidth;
+      canvas.height = canvas.parentElement.clientHeight;
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    function updateCompassDisplay(deg) {
+      const norm = (deg % 360 + 360) % 360;
+      document.getElementById('hdgVal').innerText = `${Math.round(norm).toString().padStart(3, '0')}° ${getCardinal(norm)}`;
+      document.getElementById('dispHeading').innerText = `${Math.round(norm).toString().padStart(3, '0')}° ${getCardinal(norm)}`;
+
+      // Tape step: 45px per 15 degrees = 3px per degree
+      const step = 3.0;
+      const baseOffset = 24 * 45; // center on middle set
+      const offset = - (baseOffset + (norm * step) + 22.5);
+      tapeEl.style.transform = `translateX(${offset}px)`;
+    }
+
+    function getCardinal(deg) {
+      if (deg >= 337.5 || deg < 22.5) return 'N';
+      if (deg < 67.5) return 'NE';
+      if (deg < 112.5) return 'E';
+      if (deg < 157.5) return 'SE';
+      if (deg < 202.5) return 'S';
+      if (deg < 247.5) return 'SW';
+      if (deg < 292.5) return 'W';
+      return 'NW';
+    }
+
+    // Gyroscope Event Listener (Mobile)
+    if (window.DeviceOrientationEvent) {
+      window.addEventListener('deviceorientation', (e) => {
+        if (e.alpha !== null) {
+          const raw = 360 - e.alpha;
+          currentHeading = (raw - headingOffset + 360) % 360;
+          if (e.beta !== null) {
+            cameraPitch = Math.max(-45, Math.min(45, e.beta - 60));
+          }
+          updateCompassDisplay(currentHeading);
+        }
+      });
+    }
+
+    // Desktop drag controls for heading & pitch
+    canvas.addEventListener('mousedown', (e) => {
+      isDraggingView = true;
+      dragStartPos = { x: e.clientX, y: e.clientY };
+      dragStartHeading = currentHeading;
+      dragStartPitch = cameraPitch;
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      if (!isDraggingView) return;
+      const dx = e.clientX - dragStartPos.x;
+      const dy = e.clientY - dragStartPos.y;
+
+      // 0.35 deg per pixel drag
+      currentHeading = (dragStartHeading - dx * 0.35 + 360) % 360;
+      cameraPitch = Math.max(-45, Math.min(45, dragStartPitch - dy * 0.25));
+      updateCompassDisplay(currentHeading);
+    });
+
+    window.addEventListener('mouseup', () => {
+      isDraggingView = false;
+    });
+
+    // Touch drag support for mobile fallback
+    canvas.addEventListener('touchstart', (e) => {
+      if (e.touches.length === 1) {
+        isDraggingView = true;
+        dragStartPos = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+        dragStartHeading = currentHeading;
+        dragStartPitch = cameraPitch;
+      }
+    }, { passive: true });
+
+    canvas.addEventListener('touchmove', (e) => {
+      if (!isDraggingView || e.touches.length !== 1) return;
+      const dx = e.touches[0].clientX - dragStartPos.x;
+      const dy = e.touches[0].clientY - dragStartPos.y;
+      currentHeading = (dragStartHeading - dx * 0.35 + 360) % 360;
+      cameraPitch = Math.max(-45, Math.min(45, dragStartPitch - dy * 0.25));
+      updateCompassDisplay(currentHeading);
+    }, { passive: true });
+
+    canvas.addEventListener('touchend', () => {
+      isDraggingView = false;
+    });
+
+    // WebSocket Telemetry Connection
+    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const ws = new WebSocket(`${wsProtocol}//${window.location.host}/ws/soldier`);
+
+    ws.onmessage = (event) => {
+      try {
+        const msg = JSON.parse(event.data);
+        if (msg.type === 'SOLDIER_UPDATE') {
+          threats = msg.threats || [];
+          designatedStructure = msg.designated_structure || null;
+
+          const inWez = threats.filter(t => t.inside_50m || t.distance_m <= 50.0);
+          document.getElementById('dispThreatCount').innerText = inWez.length;
+
+          // Strobe Alert Banner
+          const banner = document.getElementById('strobeAlert');
+          if (inWez.length > 0) {
+            banner.style.display = 'block';
+            if (navigator.vibrate) navigator.vibrate([150, 80, 150]);
+          } else {
+            banner.style.display = 'none';
+          }
+
+          // Designated structure HUD
+          const lockEl = document.getElementById('dispTargetLocked');
+          if (designatedStructure) {
+            lockEl.style.display = 'block';
+            document.getElementById('dispDesignatedName').innerText = `${designatedStructure.id} (${designatedStructure.length}m×${designatedStructure.width}m)`;
+          } else {
+            lockEl.style.display = 'none';
+          }
+        }
+      } catch (err) {}
+    };
+
+    function showToast(msg) {
+      const toast = document.getElementById('hudToast');
+      toast.innerText = msg;
+      toast.classList.add('visible');
+      setTimeout(() => { toast.classList.remove('visible'); }, 2200);
+    }
+
+    // BUTTON 1: TACTICAL MAP MODE
+    document.getElementById('btnMap').onclick = () => {
+      currentMode = 'map';
+      document.getElementById('btnMap').classList.add('active');
+      document.getElementById('btnReticle').classList.remove('active');
+      document.getElementById('dispMode').innerText = 'TACTICAL MAP (2D RADAR)';
+      stopCameraFeed();
+      showToast('MODE: 2D RADAR MAP');
+    };
+
+    // BUTTON 2: CAMERA RETICLE AR MODE
+    document.getElementById('btnReticle').onclick = () => {
+      currentMode = 'reticle';
+      document.getElementById('btnReticle').classList.add('active');
+      document.getElementById('btnMap').classList.remove('active');
+      document.getElementById('dispMode').innerText = 'FIRST-PERSON AR VISOR RETICLE';
+      startCameraFeed();
+      showToast('MODE: FIRST-PERSON AR RETICLE');
+    };
+
+    // BUTTON 3: CALIBRATE GYRO
+    document.getElementById('btnCalibrate').onclick = async () => {
+      // Handle iOS DeviceOrientation permission if required
+      if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+        try {
+          const res = await DeviceOrientationEvent.requestPermission();
+          if (res !== 'granted') {
+            showToast('SENSOR PERMISSION REQUIRED');
+            return;
+          }
+        } catch (e) {}
+      }
+
+      headingOffset = (currentHeading + headingOffset) % 360;
+      currentHeading = 0.0;
+      cameraPitch = 0.0;
+      updateCompassDisplay(0);
+
+      if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+      showToast('GYRO RE-ZEROED: 000° NORTH');
+    };
+
+    // Camera video acquisition
+    async function startCameraFeed() {
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: { ideal: 'environment' } },
+            audio: false
+          });
+          cameraStream = stream;
+          video.srcObject = stream;
+          video.play();
+          isCameraActive = true;
+        } catch (err) {
+          // If no camera or permission denied, fallback to synthetic tactical visor grid
+          isCameraActive = false;
+        }
+      }
+    }
+
+    function stopCameraFeed() {
+      if (cameraStream) {
+        cameraStream.getTracks().forEach(t => t.stop());
+        cameraStream = null;
+      }
+      isCameraActive = false;
+    }
+
+    // MAIN RENDERING LOOP (60 FPS)
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      if (currentMode === 'map') {
+        drawTacticalMap();
+      } else {
+        drawCameraReticle();
+      }
+
+      requestAnimationFrame(draw);
+    }
+    requestAnimationFrame(draw);
+
+    // -------------------------------------------------------------
+    // RENDER MODE A: TACTICAL MAP (2D TOP-DOWN RADAR)
+    // -------------------------------------------------------------
+    function drawTacticalMap() {
+      const cx = canvas.width / 2;
+      const cy = canvas.height / 2;
+      const scale = Math.min(canvas.width, canvas.height) / 125.0; // fits 100m tactical radius
+
+      // Radar sweep background grid lines
+      ctx.strokeStyle = 'rgba(26, 41, 59, 0.6)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(0, cy); ctx.lineTo(canvas.width, cy);
+      ctx.moveTo(cx, 0); ctx.lineTo(cx, canvas.height);
+      ctx.stroke();
+
+      // Range Rings: 10m, 25m, 50m (WEZ), 75m
+      const rings = [
+        { r: 10, col: '#00f0ff22', dash: [2, 4], label: '10m CQB' },
+        { r: 25, col: '#00f0ff44', dash: [], label: '25m' },
+        { r: 50, col: '#ff223388', dash: [8, 4], label: '50m WEAPONS ENGAGEMENT ZONE' },
+        { r: 75, col: '#ffffff18', dash: [4, 6], label: '75m' }
+      ];
+
+      rings.forEach(ring => {
+        ctx.beginPath();
+        ctx.arc(cx, cy, ring.r * scale, 0, Math.PI * 2);
+        ctx.strokeStyle = ring.col;
+        ctx.lineWidth = ring.r === 50 ? 2 : 1;
+        ctx.setLineDash(ring.dash);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        ctx.fillStyle = ring.r === 50 ? '#ff3344' : '#627b94';
+        ctx.font = '10px JetBrains Mono';
+        ctx.fillText(ring.label, cx + 6, cy - (ring.r * scale) + 12);
+      });
+
+      // Designated Structure Footprint from C2
+      if (designatedStructure) {
+        const sx = cx + (designatedStructure.x * scale);
+        const sy = cy - (designatedStructure.y * scale);
+        const sw = designatedStructure.width * scale;
+        const sh = designatedStructure.length * scale;
+
+        ctx.fillStyle = 'rgba(0, 240, 255, 0.2)';
+        ctx.fillRect(sx - sw/2, sy - sh/2, sw, sh);
+        ctx.strokeStyle = '#00f0ff';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(sx - sw/2, sy - sh/2, sw, sh);
+
+        ctx.fillStyle = '#00f0ff';
+        ctx.font = 'bold 9px JetBrains Mono';
+        ctx.fillText(`${designatedStructure.id}`, sx - sw/2, sy - sh/2 - 4);
+      }
+
+      // Threat Contacts (MIL-STD Hostiles)
+      threats.forEach(t => {
+        const px = cx + (t.x * scale);
+        const py = cy - (t.y * scale);
+
+        ctx.save();
+        ctx.translate(px, py);
+
+        // Hostile Diamond
+        ctx.beginPath();
+        ctx.moveTo(0, -9); ctx.lineTo(9, 0); ctx.lineTo(0, 9); ctx.lineTo(-9, 0);
+        ctx.closePath();
+        ctx.fillStyle = t.inside_50m ? '#ff2233' : '#ff7733';
+        ctx.fill();
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+
+        // Velocity Vector Arrow
+        if (t.speed_mps > 0.1) {
+          const headingRad = (t.heading_deg * Math.PI) / 180;
+          const vx = Math.sin(headingRad) * t.speed_mps * scale * 1.5;
+          const vy = -Math.cos(headingRad) * t.speed_mps * scale * 1.5;
+          ctx.beginPath();
+          ctx.moveTo(0, 0); ctx.lineTo(vx, vy);
+          ctx.strokeStyle = '#ff3344';
+          ctx.lineWidth = 2;
+          ctx.stroke();
+        }
+
+        // Callout label
+        const callsign = ["Alpha", "Bravo", "Charlie", "Delta", "Echo", "Foxtrot", "Golf"][((t.track_id - 1) % 7)] || `T-${t.track_id}`;
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 10px JetBrains Mono';
+        ctx.fillText(`H-${String(t.track_id).padStart(2, '0')} (${callsign})`, 12, -2);
+        ctx.fillStyle = t.inside_50m ? '#ff4455' : '#8fa6bc';
+        ctx.font = '9px JetBrains Mono';
+        ctx.fillText(`${t.distance_m}m | ${t.speed_mps}m/s`, 12, 10);
+
+        ctx.restore();
+      });
+
+      // Soldier Center Marker (Cyan Chevron rotated to heading)
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate((currentHeading * Math.PI) / 180);
+
+      // Vision Cone (60° Forward FOV)
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.arc(0, 0, 45 * scale, -Math.PI / 2 - Math.PI / 6, -Math.PI / 2 + Math.PI / 6);
+      ctx.closePath();
+      ctx.fillStyle = 'rgba(0, 240, 255, 0.07)';
+      ctx.fill();
+
+      // Chevron
+      ctx.beginPath();
+      ctx.moveTo(0, -12); ctx.lineTo(9, 10); ctx.lineTo(0, 5); ctx.lineTo(-9, 10);
+      ctx.closePath();
+      ctx.fillStyle = '#00f0ff';
+      ctx.fill();
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      ctx.restore();
+    }
+
+    // -------------------------------------------------------------
+    // RENDER MODE B: FIRST-PERSON AR CAMERA RETICLE
+    // -------------------------------------------------------------
+    function drawCameraReticle() {
+      const cx = canvas.width / 2;
+      const cy = canvas.height / 2 + (cameraPitch * 3.5); // pitch adjusts horizon vertically
+
+      // 1. Draw Camera video background or Synthetic FLIR visor
+      if (isCameraActive && video.readyState === video.HAVE_ENOUGH_DATA) {
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        // Tactical dark overlay for high HUD contrast
+        ctx.fillStyle = 'rgba(4, 8, 14, 0.35)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      } else {
+        // Synthetic Night Vision / Tactical Visor grid
+        ctx.fillStyle = '#040910';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Grid lines
+        ctx.strokeStyle = 'rgba(0, 240, 255, 0.08)';
+        ctx.lineWidth = 1;
+        for (let x = 0; x < canvas.width; x += 40) {
+          ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
+        }
+        for (let y = 0; y < canvas.height; y += 40) {
+          ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
+        }
+
+        // Horizon line
+        ctx.strokeStyle = 'rgba(0, 240, 255, 0.4)';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(cx - 160, cy); ctx.lineTo(cx - 40, cy);
+        ctx.moveTo(cx + 40, cy); ctx.lineTo(cx + 160, cy);
+        ctx.stroke();
+
+        ctx.fillStyle = 'rgba(0, 240, 255, 0.5)';
+        ctx.font = '10px JetBrains Mono';
+        ctx.fillText('HORIZON', cx + 165, cy + 4);
+      }
+
+      // 2. Pitch Ladder Markings (+10, +20, -10, -20)
+      [-20, -10, 10, 20].forEach(p => {
+        const py = cy - (p * 5.0);
+        ctx.strokeStyle = 'rgba(0, 240, 255, 0.3)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(cx - 45, py); ctx.lineTo(cx - 15, py);
+        ctx.moveTo(cx + 15, py); ctx.lineTo(cx + 45, py);
+        ctx.stroke();
+        ctx.fillStyle = 'rgba(0, 240, 255, 0.5)';
+        ctx.font = '9px JetBrains Mono';
+        ctx.fillText(`${p > 0 ? '+' : ''}${p}°`, cx + 50, py + 3);
+      });
+
+      // 3. Central Mil-Dot Crosshair Reticle
+      ctx.strokeStyle = '#00f0ff';
+      ctx.lineWidth = 1.5;
+
+      // Central ring & gap
+      ctx.beginPath();
+      ctx.arc(cx, cy, 14, 0, Math.PI * 2);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.arc(cx, cy, 2, 0, Math.PI * 2);
+      ctx.fillStyle = '#00f0ff';
+      ctx.fill();
+
+      // Crosshairs with mil-dots
+      ctx.beginPath();
+      ctx.moveTo(cx - 80, cy); ctx.lineTo(cx - 24, cy);
+      ctx.moveTo(cx + 24, cy); ctx.lineTo(cx + 80, cy);
+      ctx.moveTo(cx, cy - 80); ctx.lineTo(cx, cy - 24);
+      ctx.moveTo(cx, cy + 24); ctx.lineTo(cx, cy + 80);
+      ctx.stroke();
+
+      // Rangefinder corner brackets
+      const bSize = 60;
+      ctx.strokeStyle = 'rgba(0, 240, 255, 0.5)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(cx - bSize, cy - bSize + 15); ctx.lineTo(cx - bSize, cy - bSize); ctx.lineTo(cx - bSize + 15, cy - bSize);
+      ctx.moveTo(cx + bSize - 15, cy - bSize); ctx.lineTo(cx + bSize, cy - bSize); ctx.lineTo(cx + bSize, cy - bSize + 15);
+      ctx.moveTo(cx - bSize, cy + bSize - 15); ctx.lineTo(cx - bSize, cy + bSize); ctx.lineTo(cx - bSize + 15, cy + bSize);
+      ctx.moveTo(cx + bSize - 15, cy + bSize); ctx.lineTo(cx + bSize, cy + bSize); ctx.lineTo(cx + bSize, cy + bSize - 15);
+      ctx.stroke();
+
+      // 4. Project Augmented Reality Threat Lock Reticles
+      const hFov = 70.0; // 70-degree horizontal field of view
+      threats.forEach(t => {
+        // Compute relative azimuth from soldier to threat
+        const threatAzimuth = (Math.atan2(t.x, t.y) * 180 / Math.PI + 360) % 360;
+        let relAz = threatAzimuth - currentHeading;
+        while (relAz > 180) relAz -= 360;
+        while (relAz < -180) relAz += 360;
+
+        if (Math.abs(relAz) <= (hFov / 2)) {
+          // Inside Screen Field of View
+          const sx = cx + (relAz / (hFov / 2)) * (canvas.width * 0.44);
+          const sy = cy - ((t.z || 0) * 12.0);
+          const distScale = Math.max(0.6, Math.min(1.4, 30.0 / (t.distance_m || 20.0)));
+          const boxSize = 24 * distScale;
+
+          ctx.save();
+          ctx.translate(sx, sy);
+
+          // 3D Augmented Reality Red Corner Brackets
+          ctx.strokeStyle = '#ff2233';
+          ctx.lineWidth = 2.0;
+          ctx.beginPath();
+          ctx.moveTo(-boxSize, -boxSize + 8); ctx.lineTo(-boxSize, -boxSize); ctx.lineTo(-boxSize + 8, -boxSize);
+          ctx.moveTo(boxSize - 8, -boxSize); ctx.lineTo(boxSize, -boxSize); ctx.lineTo(boxSize, -boxSize + 8);
+          ctx.moveTo(-boxSize, boxSize - 8); ctx.lineTo(-boxSize, boxSize); ctx.lineTo(-boxSize + 8, boxSize);
+          ctx.moveTo(boxSize - 8, boxSize); ctx.lineTo(boxSize, boxSize); ctx.lineTo(boxSize, boxSize - 8);
+          ctx.stroke();
+
+          // Center hostile dot
+          ctx.fillStyle = '#ff2233';
+          ctx.beginPath(); ctx.arc(0, 0, 3, 0, Math.PI * 2); ctx.fill();
+
+          // Floating AR Callout Label
+          const callsign = ["Alpha", "Bravo", "Charlie", "Delta", "Echo", "Foxtrot", "Golf"][((t.track_id - 1) % 7)] || `T-${t.track_id}`;
+          const label = `[H-${String(t.track_id).padStart(2, '0')}] ${callsign}`;
+          ctx.fillStyle = 'rgba(8, 14, 22, 0.9)';
+          ctx.fillRect(-boxSize - 4, -boxSize - 28, 140, 24);
+          ctx.strokeStyle = '#ff2233';
+          ctx.lineWidth = 1;
+          ctx.strokeRect(-boxSize - 4, -boxSize - 28, 140, 24);
+
+          ctx.fillStyle = '#ff3344';
+          ctx.font = 'bold 10px JetBrains Mono';
+          ctx.fillText(label, -boxSize, -boxSize - 14);
+
+          ctx.fillStyle = '#ffffff';
+          ctx.font = '9px JetBrains Mono';
+          ctx.fillText(`RNG: ${t.distance_m}m | ${t.speed_mps}m/s`, -boxSize, -boxSize - 3);
+
+          ctx.restore();
+        } else {
+          // Outside FOV -> Render Off-Screen Directional Indicator Arrow at canvas edge
+          const isRight = relAz > 0;
+          const arrowX = isRight ? canvas.width - 32 : 32;
+          const arrowY = cy;
+
+          ctx.fillStyle = '#ff2233';
+          ctx.font = 'bold 10px JetBrains Mono';
+          ctx.textAlign = isRight ? 'right' : 'left';
+          ctx.fillText(isRight ? `H-${t.track_id} (${Math.round(relAz)}°) ▶` : `◀ H-${t.track_id} (${Math.round(relAz)}°)`, isRight ? arrowX - 10 : arrowX + 10, arrowY + 4);
+          ctx.textAlign = 'start';
+        }
+      });
+
+      // 5. Project Designated Structure AR Reticle
+      if (designatedStructure) {
+        const sAz = (Math.atan2(designatedStructure.x, designatedStructure.y) * 180 / Math.PI + 360) % 360;
+        let sRel = sAz - currentHeading;
+        while (sRel > 180) sRel -= 360;
+        while (sRel < -180) sRel += 360;
+
+        if (Math.abs(sRel) <= (hFov / 2)) {
+          const sx = cx + (sRel / (hFov / 2)) * (canvas.width * 0.44);
+          const sy = cy - 20;
+
+          ctx.strokeStyle = '#00f0ff';
+          ctx.lineWidth = 2;
+          ctx.strokeRect(sx - 35, sy - 25, 70, 50);
+
+          ctx.fillStyle = 'rgba(0, 240, 255, 0.9)';
+          ctx.font = 'bold 10px JetBrains Mono';
+          ctx.fillText(`TARGET: ${designatedStructure.id}`, sx - 35, sy - 32);
+          ctx.fillStyle = '#ffffff';
+          ctx.font = '9px JetBrains Mono';
+          ctx.fillText(`${designatedStructure.length}m×${designatedStructure.width}m×${designatedStructure.height}m`, sx - 35, sy + 38);
+        }
+      }
+    }
+  </script>
+</body>
+</html>
