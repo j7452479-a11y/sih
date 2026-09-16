@@ -73,7 +73,7 @@ DEFAULT_RETURN_IP = "127.0.0.1"
 # Port assignments
 UAV_UDP_PORT = 5001               # Inbound UAV point cloud stream
 UGV_UDP_PORT = 5002               # Inbound UGV point cloud stream
-TELEMETRY_RETURN_PORT = 5003      # Outbound HUD / target coordinates to UE5
+TELEMETRY_RETURN_PORT = 5003      # Outbound HUD / target coordinates to Unity HUD
 WEB_SERVER_PORT = 8000            # FastAPI REST & WebSocket hub
 
 # Binary UDP Header constants
@@ -93,6 +93,8 @@ class SemanticClass(IntEnum):
     ROAD = 1
     OBSTACLE = 2
     BRIDGE = 3
+    BUILDING = 4
+    HOSTILE = 8
     TARGET = 8
 
 # ==============================================================================

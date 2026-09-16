@@ -7,10 +7,16 @@ import asyncio
 import json
 import os
 import socket
+import sys
 import time
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Dict, List, Optional, Set
+
+# Ensure project root is in sys.path
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
 import numpy as np
 import torch
@@ -34,8 +40,12 @@ from ingestion.udp_protocol import SIHHeader
 from ingestion.udp_receiver import AsyncUdpReceiver
 from tracking.mtt_manager import MTTManager, TrackProvenance
 from tracking.tier_dbscan import TierDBSCAN
-from .cot_formatter import CoTFormatter, WGS84Converter
-from .geofence_router import GeofenceRouter
+try:
+    from .cot_formatter import CoTFormatter, WGS84Converter
+    from .geofence_router import GeofenceRouter
+except ImportError:
+    from c2_interface.cot_formatter import CoTFormatter, WGS84Converter
+    from c2_interface.geofence_router import GeofenceRouter
 
 # Global Engine Pipeline State
 grid_engine = FoveatedGrid()
@@ -54,7 +64,13 @@ current_fps = 20.0
 last_latency_ms = 4.2
 peak_ram_mb = 12.16
 
-# Return Telemetry Socket (UDP Port 5003 -> UE5 HUD)
+# Live Sensor Poses & Dynamic Tether Dynamics
+last_uav_pose = {"x": -40.0, "y": -40.0, "z": 30.0, "yaw": 45.0}
+last_ugv_pose = {"x": 0.0, "y": -45.0, "z": 0.05, "yaw": 90.0}
+last_tether_length = 18.2
+last_tether_status = "NOMINAL"
+
+# Return Telemetry Socket (UDP Port 5003 -> Unity HUD)
 return_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
 # Connected WebSocket clients
@@ -81,6 +97,47 @@ def on_udp_packet_received(header: SIHHeader, points: np.ndarray):
 
 def process_synchronized_sweep(pair: SyncedFramePair):
     """Executes full edge perception cycle across synchronized UAV and UGV sweeps."""
+    global last_uav_pose, last_ugv_pose, last_tether_length, last_tether_status
+
+    # Safely extract or estimate sensor poses from datagrams
+    uav_x = getattr(pair.uav_header, 'origin_x', float(np.mean(pair.uav_points[:, 0])) if len(pair.uav_points) > 0 else -40.0)
+    uav_y = getattr(pair.uav_header, 'origin_y', float(np.mean(pair.uav_points[:, 1])) if len(pair.uav_points) > 0 else -40.0)
+    uav_z = getattr(pair.uav_header, 'origin_z', 30.0)
+
+    ugv_x = getattr(pair.ugv_header, 'origin_x', float(np.mean(pair.ugv_points[:, 0])) if len(pair.ugv_points) > 0 else 0.0)
+    ugv_y = getattr(pair.ugv_header, 'origin_y', float(np.mean(pair.ugv_points[:, 1])) if len(pair.ugv_points) > 0 else -45.0)
+    ugv_z = getattr(pair.ugv_header, 'origin_z', 0.05)
+
+    last_uav_pose = {
+        "x": round(float(uav_x), 2),
+        "y": round(float(uav_y), 2),
+        "z": round(float(uav_z), 2),
+        "roll": round(float(getattr(pair.uav_header, 'roll', 0.0)), 1),
+        "pitch": round(float(getattr(pair.uav_header, 'pitch', 0.0)), 1),
+        "yaw": round(float(getattr(pair.uav_header, 'yaw', 45.0)), 1),
+    }
+    last_ugv_pose = {
+        "x": round(float(ugv_x), 2),
+        "y": round(float(ugv_y), 2),
+        "z": round(float(ugv_z), 2),
+        "roll": round(float(getattr(pair.ugv_header, 'roll', 0.0)), 1),
+        "pitch": round(float(getattr(pair.ugv_header, 'pitch', 0.0)), 1),
+        "yaw": round(float(getattr(pair.ugv_header, 'yaw', 90.0)), 1),
+    }
+
+    # Physical dynamic tether calculation between UAV and UGV
+    dx = last_uav_pose["x"] - last_ugv_pose["x"]
+    dy = last_uav_pose["y"] - last_ugv_pose["y"]
+    dz = last_uav_pose["z"] - last_ugv_pose["z"]
+    dist = float(np.sqrt(dx * dx + dy * dy + dz * dz))
+    last_tether_length = round(dist, 2)
+    if dist < 14.0:
+        last_tether_status = "SLACK"
+    elif dist > 22.0:
+        last_tether_status = "HIGH_TENSION"
+    else:
+        last_tether_status = "NOMINAL"
+
     # 1. Combine point clouds (transform UAV nadir into crawler ground frame)
     uav_pts_t = torch.from_numpy(pair.uav_points).float()
     ugv_pts_t = torch.from_numpy(pair.ugv_points).float()
@@ -110,14 +167,14 @@ def process_synchronized_sweep(pair: SyncedFramePair):
     # 5. Advance Multi-Target Tracking Pipeline
     active_tracks = mtt_engine.update(clusters, provenance=TrackProvenance.LIDAR_CONFIRMED)
 
-    # 6. Stream telemetry back to UE5 HUD over Port 5003
-    send_ue5_return_telemetry(active_tracks)
+    # 6. Stream telemetry back to Unity HUD over Port 5003
+    send_unity_return_telemetry(active_tracks)
 
-# Active designated structure for UE5 Soldier Visor HUD sync
+# Active designated structure for Unity Soldier Visor HUD sync
 current_designated_structure = None
 
-def send_ue5_return_telemetry(tracks):
-    """Sends JSON target coordinates and designated structure to Port 5003 for UE5 Soldier Visor Reticle."""
+def send_unity_return_telemetry(tracks):
+    """Sends JSON target coordinates and designated structure to Port 5003 for Unity Soldier Visor Reticle."""
     payload = {
         "timestamp": time.time(),
         "targets": [
@@ -133,6 +190,10 @@ def send_ue5_return_telemetry(tracks):
             for t in tracks
         ],
         "designated_structure": current_designated_structure,
+        "uav_pose": last_uav_pose,
+        "ugv_pose": last_ugv_pose,
+        "tether_length_m": last_tether_length,
+        "tether_status": last_tether_status,
     }
     try:
         data = json.dumps(payload).encode("utf-8")
@@ -146,8 +207,7 @@ async def broadcast_telemetry_loop():
         try:
             confirmed_tracks = mtt_engine.get_confirmed_tracks()
 
-            # 1. Prepare C2 Dashboard payload (Top-Down Map + Targets)
-            # 1. Prepare C2 Dashboard payload (Top-Down Map + Targets)
+            # 1. Prepare C2 Dashboard payload (Top-Down Map + Targets + Fleet State)
             if c2_websockets:
                 # Sample active surface cells for rendering (up to 4,000 cells for full 100m tactical zone)
                 cells_data = []
@@ -179,6 +239,10 @@ async def broadcast_telemetry_loop():
                     "ram_mb": live_ram_mb,
                     "cell_count": live_cell_count,
                     "interval_count": live_interval_count,
+                    "uav_pose": last_uav_pose,
+                    "ugv_pose": last_ugv_pose,
+                    "tether_length_m": last_tether_length,
+                    "tether_status": last_tether_status,
                     "cells": cells_data,
                     "tracks": [
                         {
@@ -205,7 +269,7 @@ async def broadcast_telemetry_loop():
                         disconnected.add(ws)
                 c2_websockets.difference_update(disconnected)
 
-            # 2. Prepare Soldier ATAK EUD payload (Geofenced Threat Alerts)
+            # 2. Prepare Soldier ATAK EUD payload (Geofenced Threat Alerts + POVs + HUD)
             if soldier_websockets:
                 soldier_tracks = geofence_router.filter_tracks_for_soldier(confirmed_tracks)
                 soldier_msg = json.dumps({
@@ -213,6 +277,12 @@ async def broadcast_telemetry_loop():
                     "timestamp": time.time(),
                     "threats": soldier_tracks,
                     "designated_structure": current_designated_structure,
+                    "uav_pose": last_uav_pose,
+                    "ugv_pose": last_ugv_pose,
+                    "tether_length_m": last_tether_length,
+                    "tether_status": last_tether_status,
+                    "fps": round(current_fps, 1),
+                    "latency_ms": round(last_latency_ms, 2),
                 })
 
                 disconnected_soldier = set()
@@ -276,6 +346,13 @@ def get_soldier_eud():
         return html_file.read_text(encoding="utf-8")
     return "<h1>Soldier EUD loading...</h1>"
 
+@app.get("/sim", response_class=HTMLResponse)
+def get_tactical_sim_3d():
+    html_file = STATIC_DIR / "tactical_sim_3d.html"
+    if html_file.exists():
+        return html_file.read_text(encoding="utf-8")
+    return "<h1>Tactical 3D Simulator loading...</h1>"
+
 @app.get("/api/status")
 def get_status():
     return {
@@ -332,11 +409,11 @@ def get_designated_structure():
 
 @app.post("/api/designate_structure")
 async def post_designate_structure(request: Request):
-    """Sets the designated building/obstacle from C2 or UE5 and streams to Port 5003."""
+    """Sets the designated building/obstacle from C2 or Unity and streams to Port 5003."""
     global current_designated_structure
     data = await request.json()
     current_designated_structure = data.get("structure")
-    send_ue5_return_telemetry(mtt_engine.get_confirmed_tracks())
+    send_unity_return_telemetry(mtt_engine.get_confirmed_tracks())
     return {"status": "SUCCESS", "designated_structure": current_designated_structure}
 
 @app.websocket("/ws/c2")
@@ -352,10 +429,10 @@ async def websocket_c2_endpoint(websocket: WebSocket):
                 msg_type = data.get("type")
                 if msg_type == "DESIGNATE_STRUCTURE":
                     current_designated_structure = data.get("structure")
-                    send_ue5_return_telemetry(mtt_engine.get_confirmed_tracks())
+                    send_unity_return_telemetry(mtt_engine.get_confirmed_tracks())
                 elif msg_type == "CLEAR_DESIGNATION":
                     current_designated_structure = None
-                    send_ue5_return_telemetry(mtt_engine.get_confirmed_tracks())
+                    send_unity_return_telemetry(mtt_engine.get_confirmed_tracks())
             except Exception:
                 pass
     except WebSocketDisconnect:
@@ -370,3 +447,8 @@ async def websocket_soldier_endpoint(websocket: WebSocket):
             await websocket.receive_text()
     except WebSocketDisconnect:
         soldier_websockets.discard(websocket)
+
+if __name__ == "__main__":
+    import uvicorn
+    print(f"[*] Starting Tactical C2 Perception Server on http://{BIND_IP}:{WEB_SERVER_PORT}")
+    uvicorn.run("c2_interface.server:app", host=BIND_IP, port=WEB_SERVER_PORT, reload=False)

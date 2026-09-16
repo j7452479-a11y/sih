@@ -3,19 +3,20 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>ATAK SOLDIER EUD | SIH26053</title>
+  <title>ATAK SOLDIER EUD | MUM-T TACTICAL VISOR | SIH26053</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700;800&family=Outfit:wght@600;800&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg-dark: #040609;
-      --panel-bg: rgba(8, 14, 22, 0.94);
-      --border-hud: #1a293b;
+      --bg-dark: #03060a;
+      --panel-bg: rgba(6, 12, 20, 0.94);
+      --border-hud: #172638;
       --cyan: #00f0ff;
       --green: #00ff88;
       --red: #ff2233;
       --amber: #ffaa00;
+      --purple: #b055ff;
       --mono: 'JetBrains Mono', monospace;
       --sans: 'Outfit', sans-serif;
     }
@@ -33,14 +34,14 @@
 
     /* TOP STATUS BAR */
     .top-bar {
-      height: 48px;
+      height: 46px;
       background: var(--panel-bg);
       border-bottom: 1px solid var(--border-hud);
       display: flex;
       align-items: center;
       justify-content: space-between;
       padding: 0 16px;
-      font-size: 13px;
+      font-size: 12px;
       z-index: 20;
     }
     .hud-title {
@@ -53,15 +54,14 @@
     .top-right {
       display: flex;
       align-items: center;
-      gap: 12px;
-    }
-    .gps-fix {
-      color: var(--green);
+      gap: 14px;
       font-size: 11px;
-      font-weight: 700;
+    }
+    .status-badge {
       display: flex;
       align-items: center;
       gap: 6px;
+      font-weight: 700;
     }
     .status-dot {
       width: 7px;
@@ -78,8 +78,8 @@
 
     /* DYNAMIC COMPASS TAPE */
     .compass-container {
-      height: 46px;
-      background: rgba(10, 18, 28, 0.96);
+      height: 42px;
+      background: rgba(8, 15, 24, 0.98);
       border-bottom: 1px solid var(--border-hud);
       position: relative;
       overflow: hidden;
@@ -97,14 +97,13 @@
     .compass-tape {
       display: flex;
       position: absolute;
-      top: 13px;
+      top: 11px;
       left: 50%;
       white-space: nowrap;
       transition: transform 0.05s linear;
       font-size: 11px;
       font-weight: 700;
-      color: #6d88a3;
-      user-select: none;
+      color: #627b94;
     }
     .compass-tape span {
       display: inline-block;
@@ -114,10 +113,10 @@
     .compass-marker {
       position: absolute;
       width: 2px;
-      height: 24px;
+      height: 22px;
       background: var(--cyan);
       box-shadow: 0 0 8px var(--cyan);
-      top: 11px;
+      top: 10px;
       left: 50%;
       transform: translateX(-50%);
       z-index: 25;
@@ -128,7 +127,7 @@
       bottom: 2px;
       left: 50%;
       transform: translateX(-50%);
-      background: rgba(0, 240, 255, 0.18);
+      background: rgba(0, 240, 255, 0.16);
       border: 1px solid rgba(0, 240, 255, 0.4);
       color: var(--cyan);
       border-radius: 3px;
@@ -139,7 +138,7 @@
       pointer-events: none;
     }
 
-    /* STROBE THREAT ALERT BANNER */
+    /* 50M WEAPONS ENGAGEMENT ZONE STROBE ALERT */
     .threat-banner {
       background: var(--red);
       color: white;
@@ -147,21 +146,21 @@
       font-size: 11px;
       font-weight: 800;
       letter-spacing: 1.5px;
-      padding: 7px 12px;
+      padding: 6px 12px;
       display: none;
       animation: banner-strobe 0.7s infinite alternate;
       z-index: 20;
     }
     @keyframes banner-strobe {
       from { background: #ff2233; }
-      to { background: #77000d; }
+      to { background: #66000c; }
     }
 
     /* MAIN TACTICAL VIEWPORT */
     .tactical-view {
       flex: 1;
       position: relative;
-      background: #020406;
+      background: #010306;
       overflow: hidden;
     }
     #soldierCanvas {
@@ -169,15 +168,40 @@
       height: 100%;
       display: block;
     }
-    #cameraFeed {
-      display: none;
+
+    /* PICTURE-IN-PICTURE (UAV BELLY FEED) */
+    .pip-window {
       position: absolute;
-      top: 0;
-      left: 0;
+      top: 12px;
+      right: 14px;
+      width: 220px;
+      height: 160px;
+      background: rgba(4, 9, 16, 0.92);
+      border: 1px solid var(--cyan);
+      box-shadow: 0 0 16px rgba(0, 240, 255, 0.25);
+      border-radius: 6px;
+      overflow: hidden;
+      z-index: 30;
+      display: flex;
+      flex-direction: column;
+    }
+    .pip-header {
+      height: 22px;
+      background: rgba(0, 240, 255, 0.15);
+      border-bottom: 1px solid rgba(0, 240, 255, 0.3);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 8px;
+      font-size: 9px;
+      font-weight: 800;
+      color: var(--cyan);
+    }
+    #pipCanvas {
+      flex: 1;
       width: 100%;
       height: 100%;
-      object-fit: cover;
-      pointer-events: none;
+      background: #020509;
     }
 
     /* TOAST NOTIFICATION */
@@ -199,97 +223,97 @@
       transition: opacity 0.3s ease;
       z-index: 50;
     }
-    .hud-toast.visible {
-      opacity: 1;
-    }
-
-    /* BOTTOM CONTROLS & DOCK */
-    .bottom-bar {
-      height: 72px;
-      background: var(--panel-bg);
-      border-top: 1px solid var(--border-hud);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 12px;
-      padding: 0 16px;
-      z-index: 20;
-    }
-    .btn-mode {
-      background: #111a26;
-      color: #7b94ad;
-      border: 1px solid var(--border-hud);
-      padding: 12px 20px;
-      font-family: var(--mono);
-      font-size: 12px;
-      font-weight: 700;
-      letter-spacing: 0.5px;
-      border-radius: 6px;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      transition: all 0.2s ease;
-    }
-    .btn-mode:hover {
-      border-color: #2b4564;
-      color: #c0d5ec;
-    }
-    .btn-mode.active {
-      background: rgba(0, 240, 255, 0.16);
-      color: var(--cyan);
-      border-color: var(--cyan);
-      box-shadow: 0 0 12px rgba(0, 240, 255, 0.25);
-    }
-    .btn-mode:active {
-      transform: scale(0.97);
-    }
+    .hud-toast.visible { opacity: 1; }
 
     /* HUD OVERLAY INFO */
     .hud-meta-overlay {
       position: absolute;
       bottom: 12px;
       left: 14px;
-      background: rgba(8, 14, 22, 0.85);
+      background: rgba(6, 12, 20, 0.88);
       border: 1px solid var(--border-hud);
-      border-radius: 4px;
-      padding: 6px 12px;
+      border-radius: 6px;
+      padding: 8px 14px;
       font-size: 10px;
       pointer-events: none;
       display: flex;
       flex-direction: column;
-      gap: 3px;
+      gap: 4px;
       z-index: 15;
     }
     .hud-meta-val {
       color: var(--cyan);
       font-weight: 700;
     }
+
+    /* BOTTOM CONTROLS & MULTI-POV DOCK */
+    .bottom-bar {
+      height: 68px;
+      background: var(--panel-bg);
+      border-top: 1px solid var(--border-hud);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 0 16px;
+      z-index: 20;
+    }
+    .btn-pov {
+      background: #0d1622;
+      color: #6f8ba6;
+      border: 1px solid var(--border-hud);
+      padding: 9px 14px;
+      font-family: var(--mono);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+    }
+    .btn-pov:hover {
+      border-color: #244263;
+      color: #d2e4f7;
+    }
+    .btn-pov.active {
+      background: rgba(0, 240, 255, 0.16);
+      color: var(--cyan);
+      border-color: var(--cyan);
+      box-shadow: 0 0 12px rgba(0, 240, 255, 0.3);
+    }
+    .btn-pov:active { transform: scale(0.97); }
   </style>
 </head>
 <body>
 
-  <!-- Hidden Camera Video element for Reticle mode -->
-  <video id="cameraFeed" playsinline autoplay muted></video>
-
-  <!-- TOP BAR -->
+  <!-- TOP STATUS BAR -->
   <div class="top-bar">
     <div class="hud-title">
-      <span style="color: var(--cyan);">ATAK-EUD</span>
-      <span style="color: #627b94;">| MUM-T</span>
-      <span style="font-size: 10px; padding: 2px 6px; border-radius: 3px; background: rgba(0,255,136,0.15); color: var(--green); margin-left: 6px;">
+      <span style="color: var(--cyan);">MUM-T TACTICAL HUD</span>
+      <span style="color: #4b6277;">|</span>
+      <span style="color: #abbdd0; font-size: 11px;">SIH26053 INTEGRATED EDGE ENGINE</span>
+      <span style="font-size: 9px; padding: 2px 6px; border-radius: 3px; background: rgba(0,255,136,0.15); color: var(--green); margin-left: 6px;">
         DISMOUNTED SOLDIER
       </span>
     </div>
     <div class="top-right">
-      <div class="gps-fix">
+      <div class="status-badge" style="color: var(--green);">
         <div class="status-dot"></div>
-        <span>RTK-FIX (0.2m)</span>
+        <span>20 Hz SYNC</span>
+      </div>
+      <div class="status-badge" style="color: var(--cyan);" id="statTether">
+        <span>TETHER: 18.2m (NOMINAL)</span>
+      </div>
+      <div class="status-badge" style="color: #abbdd0;" id="statRam">
+        <span>RAM: 12.16 MB (-99.2%)</span>
       </div>
     </div>
   </div>
 
-  <!-- COMPASS TAPE -->
+  <!-- DYNAMIC COMPASS TAPE -->
   <div class="compass-container">
     <div class="compass-marker"></div>
     <div class="heading-badge" id="hdgVal">000° N</div>
@@ -298,67 +322,95 @@
     </div>
   </div>
 
-  <!-- 50M WEAPONS ENGAGEMENT ZONE STROBE ALERT -->
+  <!-- 50M WEZ STROBE ALERT -->
   <div class="threat-banner" id="strobeAlert">
-    WARNING: HOSTILE WITHIN 50M WEAPONS ENGAGEMENT ZONE
+    ⚠ WARNING: HOSTILE IN 50M WEAPONS ENGAGEMENT ZONE ⚠
   </div>
 
   <!-- MAIN CANVAS -->
   <div class="tactical-view">
     <canvas id="soldierCanvas"></canvas>
-    <div class="hud-toast" id="hudToast">GYRO RE-ZEROED: 000° N</div>
+    
+    <!-- UAV BELLY TOP-DOWN PiP FEED -->
+    <div class="pip-window" id="pipContainer">
+      <div class="pip-header">
+        <span>UAV NADIR FEED [PiP]</span>
+        <span id="pipAlt">+30.0m</span>
+      </div>
+      <canvas id="pipCanvas"></canvas>
+    </div>
+
+    <div class="hud-toast" id="hudToast">POV SWITCHED: SOLDIER VISOR</div>
 
     <div class="hud-meta-overlay">
-      <div>MODE: <span class="hud-meta-val" id="dispMode">TACTICAL MAP (2D RADAR)</span></div>
+      <div>VIEWPORT: <span class="hud-meta-val" id="dispMode">POV 1: SOLDIER VISOR (1ST PERSON)</span></div>
       <div>HEADING: <span class="hud-meta-val" id="dispHeading">000° NORTH</span></div>
-      <div>THREATS IN 50M WEZ: <span class="hud-meta-val" style="color: var(--red);" id="dispThreatCount">0</span></div>
+      <div>50M WEZ THREATS: <span class="hud-meta-val" style="color: var(--red);" id="dispThreatCount">0</span></div>
+      <div>DRONE ALTITUDE: <span class="hud-meta-val" id="dispDroneAlt">+30.0m AGL</span></div>
+      <div>RC CAR ROVER: <span class="hud-meta-val" id="dispRoverPos">X: 0.0m, Y: -45.0m</span></div>
       <div id="dispTargetLocked" style="display: none;">DESIGNATED: <span class="hud-meta-val" id="dispDesignatedName">--</span></div>
     </div>
   </div>
 
-  <!-- BOTTOM CONTROL BAR -->
+  <!-- BOTTOM MULTI-POV DOCK -->
   <div class="bottom-bar">
-    <button class="btn-mode active" id="btnMap">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/>
-      </svg>
-      <span>TACTICAL MAP</span>
+    <button class="btn-pov active" id="btnPov1" onclick="switchPov('soldier')">
+      <span>1: SOLDIER VISOR</span>
     </button>
-    <button class="btn-mode" id="btnReticle">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <circle cx="12" cy="12" r="9"/><line x1="12" y1="3" x2="12" y2="7"/><line x1="12" y1="17" x2="12" y2="21"/><line x1="3" y1="12" x2="7" y2="12"/><line x1="17" y1="12" x2="21" y2="12"/><circle cx="12" cy="12" r="2"/>
-      </svg>
-      <span>CAMERA RETICLE</span>
+    <button class="btn-pov" id="btnPov2" onclick="switchPov('uav')">
+      <span>2: UAV AERIAL CHASE</span>
     </button>
-    <button class="btn-mode" id="btnCalibrate">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
-      </svg>
-      <span>CALIBRATE GYRO</span>
+    <button class="btn-pov" id="btnPov3" onclick="switchPov('ugv')">
+      <span>3: UGV ROVER DASH</span>
+    </button>
+    <button class="btn-pov" id="btnPov4" onclick="switchPov('map')">
+      <span>4: ATAK TACTICAL MAP</span>
+    </button>
+    <button class="btn-pov" id="btnCalibrate" onclick="calibrateHeading()">
+      <span>CALIBRATE (000°)</span>
     </button>
   </div>
 
   <script>
     const canvas = document.getElementById('soldierCanvas');
     const ctx = canvas.getContext('2d');
-    const video = document.getElementById('cameraFeed');
+    const pipCanvas = document.getElementById('pipCanvas');
+    const pipCtx = pipCanvas.getContext('2d');
 
-    let currentMode = 'map'; // 'map' or 'reticle'
+    // Operational Modes: 'soldier', 'uav', 'ugv', 'map'
+    let currentPov = 'soldier';
     let currentHeading = 0.0;
+    let cameraPitch = 0.0;
     let headingOffset = 0.0;
-    let cameraPitch = 0.0; // in degrees (-30 to +30)
+    
+    // Live Telemetry Cache
     let threats = [];
     let designatedStructure = null;
-    let cameraStream = null;
-    let isCameraActive = false;
+    let uavPose = { x: -40.0, y: -40.0, z: 30.0, yaw: 45.0 };
+    let ugvPose = { x: 0.0, y: -45.0, z: 0.05, yaw: 90.0 };
+    let tetherLength = 18.2;
+    let tetherStatus = "NOMINAL";
+    let lastAudioAlertTime = 0;
 
-    // Desktop mouse interaction for heading rotation & pitch
-    let isDraggingView = false;
-    let dragStartPos = { x: 0, y: 0 };
-    let dragStartHeading = 0;
-    let dragStartPitch = 0;
+    // Web Audio Synthesizer for Tactical Alerts
+    let audioCtx = null;
+    function playTacticalBeep(freq = 880, duration = 0.08) {
+      try {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + duration);
+      } catch (e) {}
+    }
 
-    // Build Continuous Compass Tape (3x repeat for seamless wrap-around)
+    // Build Compass Tape
     const tapeEl = document.getElementById('compassTape');
     const headings = [
       'N', '015', '030', '045', '060', '075', 'E', '105', '120', '135', '150', '165',
@@ -373,18 +425,19 @@
     function resize() {
       canvas.width = canvas.parentElement.clientWidth;
       canvas.height = canvas.parentElement.clientHeight;
+      pipCanvas.width = pipCanvas.clientWidth;
+      pipCanvas.height = pipCanvas.clientHeight;
     }
     window.addEventListener('resize', resize);
     resize();
 
     function updateCompassDisplay(deg) {
       const norm = (deg % 360 + 360) % 360;
-      document.getElementById('hdgVal').innerText = `${Math.round(norm).toString().padStart(3, '0')}° ${getCardinal(norm)}`;
-      document.getElementById('dispHeading').innerText = `${Math.round(norm).toString().padStart(3, '0')}° ${getCardinal(norm)}`;
-
-      // Tape step: 45px per 15 degrees = 3px per degree
+      const str = `${Math.round(norm).toString().padStart(3, '0')}° ${getCardinal(norm)}`;
+      document.getElementById('hdgVal').innerText = str;
+      document.getElementById('dispHeading').innerText = str;
       const step = 3.0;
-      const baseOffset = 24 * 45; // center on middle set
+      const baseOffset = 24 * 45;
       const offset = - (baseOffset + (norm * step) + 22.5);
       tapeEl.style.transform = `translateX(${offset}px)`;
     }
@@ -400,491 +453,553 @@
       return 'NW';
     }
 
-    // Gyroscope Event Listener (Mobile)
-    if (window.DeviceOrientationEvent) {
-      window.addEventListener('deviceorientation', (e) => {
-        if (e.alpha !== null) {
-          const raw = 360 - e.alpha;
-          currentHeading = (raw - headingOffset + 360) % 360;
-          if (e.beta !== null) {
-            cameraPitch = Math.max(-45, Math.min(45, e.beta - 60));
-          }
-          updateCompassDisplay(currentHeading);
-        }
-      });
+    // Interactive Dragging
+    let isDragging = false;
+    let dragStart = { x: 0, y: 0 };
+    let dragHeading = 0;
+    let dragPitch = 0;
+
+    canvas.addEventListener('mousedown', (e) => {
+      isDragging = true;
+      dragStart = { x: e.clientX, y: e.clientY };
+      dragHeading = currentHeading;
+      dragPitch = cameraPitch;
+    });
+    window.addEventListener('mousemove', (e) => {
+      if (!isDragging) return;
+      const dx = e.clientX - dragStart.x;
+      const dy = e.clientY - dragStart.y;
+      currentHeading = (dragHeading - dx * 0.35 + 360) % 360;
+      cameraPitch = Math.max(-35, Math.min(35, dragPitch - dy * 0.25));
+      updateCompassDisplay(currentHeading);
+    });
+    window.addEventListener('mouseup', () => { isDragging = false; });
+
+    // POV Switcher
+    function switchPov(mode) {
+      currentPov = mode;
+      document.querySelectorAll('.btn-pov').forEach(b => b.classList.remove('active'));
+      const map = { 'soldier': 'btnPov1', 'uav': 'btnPov2', 'ugv': 'btnPov3', 'map': 'btnPov4' };
+      if (map[mode]) document.getElementById(map[mode]).classList.add('active');
+
+      const labels = {
+        'soldier': 'POV 1: SOLDIER VISOR (1ST PERSON)',
+        'uav': 'POV 2: UAV AERIAL CHASE (+30M CHASE CAM)',
+        'ugv': 'POV 3: UGV ROVER DASH (MITSUBISHI EVO RC CAR)',
+        'map': 'POV 4: ATAK TACTICAL MAP (2.5D RADAR)'
+      };
+      document.getElementById('dispMode').innerText = labels[mode] || mode;
+      showToast(`POV SWITCHED: ${labels[mode]}`);
     }
 
-    // Desktop drag controls for heading & pitch
-    canvas.addEventListener('mousedown', (e) => {
-      isDraggingView = true;
-      dragStartPos = { x: e.clientX, y: e.clientY };
-      dragStartHeading = currentHeading;
-      dragStartPitch = cameraPitch;
-    });
-
-    window.addEventListener('mousemove', (e) => {
-      if (!isDraggingView) return;
-      const dx = e.clientX - dragStartPos.x;
-      const dy = e.clientY - dragStartPos.y;
-
-      // 0.35 deg per pixel drag
-      currentHeading = (dragStartHeading - dx * 0.35 + 360) % 360;
-      cameraPitch = Math.max(-45, Math.min(45, dragStartPitch - dy * 0.25));
-      updateCompassDisplay(currentHeading);
-    });
-
-    window.addEventListener('mouseup', () => {
-      isDraggingView = false;
-    });
-
-    // Touch drag support for mobile fallback
-    canvas.addEventListener('touchstart', (e) => {
-      if (e.touches.length === 1) {
-        isDraggingView = true;
-        dragStartPos = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-        dragStartHeading = currentHeading;
-        dragStartPitch = cameraPitch;
-      }
-    }, { passive: true });
-
-    canvas.addEventListener('touchmove', (e) => {
-      if (!isDraggingView || e.touches.length !== 1) return;
-      const dx = e.touches[0].clientX - dragStartPos.x;
-      const dy = e.touches[0].clientY - dragStartPos.y;
-      currentHeading = (dragStartHeading - dx * 0.35 + 360) % 360;
-      cameraPitch = Math.max(-45, Math.min(45, dragStartPitch - dy * 0.25));
-      updateCompassDisplay(currentHeading);
-    }, { passive: true });
-
-    canvas.addEventListener('touchend', () => {
-      isDraggingView = false;
-    });
-
-    // WebSocket Telemetry Connection
-    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const ws = new WebSocket(`${wsProtocol}//${window.location.host}/ws/soldier`);
-
-    ws.onmessage = (event) => {
-      try {
-        const msg = JSON.parse(event.data);
-        if (msg.type === 'SOLDIER_UPDATE') {
-          threats = msg.threats || [];
-          designatedStructure = msg.designated_structure || null;
-
-          const inWez = threats.filter(t => t.inside_50m || t.distance_m <= 50.0);
-          document.getElementById('dispThreatCount').innerText = inWez.length;
-
-          // Strobe Alert Banner
-          const banner = document.getElementById('strobeAlert');
-          if (inWez.length > 0) {
-            banner.style.display = 'block';
-            if (navigator.vibrate) navigator.vibrate([150, 80, 150]);
-          } else {
-            banner.style.display = 'none';
-          }
-
-          // Designated structure HUD
-          const lockEl = document.getElementById('dispTargetLocked');
-          if (designatedStructure) {
-            lockEl.style.display = 'block';
-            document.getElementById('dispDesignatedName').innerText = `${designatedStructure.id} (${designatedStructure.length}m×${designatedStructure.width}m)`;
-          } else {
-            lockEl.style.display = 'none';
-          }
-        }
-      } catch (err) {}
-    };
+    function calibrateHeading() {
+      currentHeading = 0.0;
+      cameraPitch = 0.0;
+      updateCompassDisplay(0);
+      showToast('GYRO RE-ZEROED: 000° NORTH');
+    }
 
     function showToast(msg) {
       const toast = document.getElementById('hudToast');
       toast.innerText = msg;
       toast.classList.add('visible');
-      setTimeout(() => { toast.classList.remove('visible'); }, 2200);
+      setTimeout(() => { toast.classList.remove('visible'); }, 2000);
     }
 
-    // BUTTON 1: TACTICAL MAP MODE
-    document.getElementById('btnMap').onclick = () => {
-      currentMode = 'map';
-      document.getElementById('btnMap').classList.add('active');
-      document.getElementById('btnReticle').classList.remove('active');
-      document.getElementById('dispMode').innerText = 'TACTICAL MAP (2D RADAR)';
-      stopCameraFeed();
-      showToast('MODE: 2D RADAR MAP');
-    };
+    // Connect WebSocket
+    function connectWebSocket() {
+      const host = window.location.host || 'localhost:8000';
+      const wsUrl = `ws://${host}/ws/soldier`;
+      const ws = new WebSocket(wsUrl);
 
-    // BUTTON 2: CAMERA RETICLE AR MODE
-    document.getElementById('btnReticle').onclick = () => {
-      currentMode = 'reticle';
-      document.getElementById('btnReticle').classList.add('active');
-      document.getElementById('btnMap').classList.remove('active');
-      document.getElementById('dispMode').innerText = 'FIRST-PERSON AR VISOR RETICLE';
-      startCameraFeed();
-      showToast('MODE: FIRST-PERSON AR RETICLE');
-    };
-
-    // BUTTON 3: CALIBRATE GYRO
-    document.getElementById('btnCalibrate').onclick = async () => {
-      // Handle iOS DeviceOrientation permission if required
-      if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+      ws.onmessage = (event) => {
         try {
-          const res = await DeviceOrientationEvent.requestPermission();
-          if (res !== 'granted') {
-            showToast('SENSOR PERMISSION REQUIRED');
-            return;
+          const data = JSON.parse(event.data);
+          if (data.type === 'SOLDIER_UPDATE') {
+            threats = data.threats || [];
+            designatedStructure = data.designated_structure;
+            if (data.uav_pose) uavPose = data.uav_pose;
+            if (data.ugv_pose) ugvPose = data.ugv_pose;
+            if (data.tether_length_m) tetherLength = data.tether_length_m;
+            if (data.tether_status) tetherStatus = data.tether_status;
+
+            // Update UI elements
+            const threat50m = threats.filter(t => t.inside_50m).length;
+            document.getElementById('dispThreatCount').innerText = threat50m;
+            document.getElementById('statTether').innerText = `TETHER: ${tetherLength}m (${tetherStatus})`;
+            document.getElementById('dispDroneAlt').innerText = `+${(uavPose.z || 30.0).toFixed(1)}m AGL`;
+            document.getElementById('pipAlt').innerText = `+${(uavPose.z || 30.0).toFixed(1)}m`;
+            document.getElementById('dispRoverPos').innerText = `X: ${(ugvPose.x || 0.0).toFixed(1)}m, Y: ${(ugvPose.y || -45.0).toFixed(1)}m`;
+
+            // Strobe alert
+            const banner = document.getElementById('strobeAlert');
+            if (threat50m > 0) {
+              banner.style.display = 'block';
+              const now = Date.now();
+              if (now - lastAudioAlertTime > 800) {
+                playTacticalBeep(920, 0.1);
+                lastAudioAlertTime = now;
+              }
+            } else {
+              banner.style.display = 'none';
+            }
           }
         } catch (e) {}
-      }
+      };
 
-      headingOffset = (currentHeading + headingOffset) % 360;
-      currentHeading = 0.0;
-      cameraPitch = 0.0;
-      updateCompassDisplay(0);
-
-      if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
-      showToast('GYRO RE-ZEROED: 000° NORTH');
-    };
-
-    // Camera video acquisition
-    async function startCameraFeed() {
-      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-        try {
-          const stream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: { ideal: 'environment' } },
-            audio: false
-          });
-          cameraStream = stream;
-          video.srcObject = stream;
-          video.play();
-          isCameraActive = true;
-        } catch (err) {
-          // If no camera or permission denied, fallback to synthetic tactical visor grid
-          isCameraActive = false;
-        }
-      }
+      ws.onclose = () => { setTimeout(connectWebSocket, 1500); };
     }
+    connectWebSocket();
 
-    function stopCameraFeed() {
-      if (cameraStream) {
-        cameraStream.getTracks().forEach(t => t.stop());
-        cameraStream = null;
-      }
-      isCameraActive = false;
-    }
-
-    // MAIN RENDERING LOOP (60 FPS)
-    function draw() {
+    // -------------------------------------------------------------
+    // MAIN DRAW LOOP (60 FPS)
+    // -------------------------------------------------------------
+    function render() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      if (currentMode === 'map') {
-        drawTacticalMap();
+      if (currentPov === 'soldier') {
+        drawSoldierVisor();
+      } else if (currentPov === 'uav') {
+        drawUavAerialChase();
+      } else if (currentPov === 'ugv') {
+        drawUgvRoverDash();
       } else {
-        drawCameraReticle();
+        drawAtakTacticalMap();
       }
 
-      requestAnimationFrame(draw);
+      drawPipNadirFeed();
+      requestAnimationFrame(render);
     }
-    requestAnimationFrame(draw);
+    requestAnimationFrame(render);
 
     // -------------------------------------------------------------
-    // RENDER MODE A: TACTICAL MAP (2D TOP-DOWN RADAR)
+    // POV 1: SOLDIER FIRST-PERSON VISOR
     // -------------------------------------------------------------
-    function drawTacticalMap() {
+    function drawSoldierVisor() {
       const cx = canvas.width / 2;
-      const cy = canvas.height / 2;
-      const scale = Math.min(canvas.width, canvas.height) / 125.0; // fits 100m tactical radius
+      const cy = canvas.height / 2 + (cameraPitch * 4.0);
 
-      // Radar sweep background grid lines
-      ctx.strokeStyle = 'rgba(26, 41, 59, 0.6)';
+      // Dark Tactical Night Sky & Ground
+      ctx.fillStyle = '#020509';
+      ctx.fillRect(0, 0, canvas.width, cy);
+      ctx.fillStyle = '#050b13';
+      ctx.fillRect(0, cy, canvas.width, canvas.height - cy);
+
+      // Horizon line
+      ctx.strokeStyle = 'rgba(0, 240, 255, 0.35)';
       ctx.lineWidth = 1;
       ctx.beginPath();
-      ctx.moveTo(0, cy); ctx.lineTo(canvas.width, cy);
-      ctx.moveTo(cx, 0); ctx.lineTo(cx, canvas.height);
+      ctx.moveTo(cx - 200, cy); ctx.lineTo(cx + 200, cy);
       ctx.stroke();
 
-      // Range Rings: 10m, 25m, 50m (WEZ), 75m
-      const rings = [
-        { r: 10, col: '#00f0ff22', dash: [2, 4], label: '10m CQB' },
-        { r: 25, col: '#00f0ff44', dash: [], label: '25m' },
-        { r: 50, col: '#ff223388', dash: [8, 4], label: '50m WEAPONS ENGAGEMENT ZONE' },
-        { r: 75, col: '#ffffff18', dash: [4, 6], label: '75m' }
-      ];
+      // CustomDepth Stencil Blue Wireframe: Normandy Village Street & Stone Houses
+      ctx.strokeStyle = 'rgba(0, 180, 255, 0.4)';
+      ctx.lineWidth = 1.2;
 
+      // Perspective Cobblestone Street Perspective
+      ctx.beginPath();
+      ctx.moveTo(cx - 50, cy); ctx.lineTo(cx - 380, canvas.height);
+      ctx.moveTo(cx + 50, cy); ctx.lineTo(cx + 380, canvas.height);
+      ctx.stroke();
+
+      // Transverse Road Grid
+      for (let d = 1; d <= 6; d++) {
+        const yLine = cy + (canvas.height - cy) * (d / 6.0) ** 1.8;
+        const xSpan = 50 + (330) * (d / 6.0) ** 1.8;
+        ctx.beginPath();
+        ctx.moveTo(cx - xSpan, yLine); ctx.lineTo(cx + xSpan, yLine);
+        ctx.stroke();
+      }
+
+      // Projected Green Traversable Underpass Carpet
+      ctx.fillStyle = 'rgba(0, 255, 136, 0.15)';
+      ctx.strokeStyle = '#00ff88';
+      ctx.lineWidth = 2.0;
+      ctx.beginPath();
+      const uY1 = cy + (canvas.height - cy) * 0.35;
+      const uY2 = cy + (canvas.height - cy) * 0.65;
+      const uX1 = 50 + 330 * 0.35;
+      const uX2 = 50 + 330 * 0.65;
+      ctx.moveTo(cx - uX1 * 0.6, uY1);
+      ctx.lineTo(cx + uX1 * 0.6, uY1);
+      ctx.lineTo(cx + uX2 * 0.6, uY2);
+      ctx.lineTo(cx - uX2 * 0.6, uY2);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = '#00ff88';
+      ctx.font = 'bold 9px JetBrains Mono';
+      ctx.fillText('[ TRAVERSABLE UNDERPASS CORRIDOR (CLEARANCE 5.2m) ]', cx - 140, uY1 + 18);
+
+      // CustomDepth Stencil Stone Houses (Left & Right Outlines)
+      // Left Building Outline
+      ctx.strokeStyle = 'rgba(0, 240, 255, 0.6)';
+      ctx.strokeRect(cx - 340, cy - 110, 120, 180);
+      ctx.fillStyle = 'rgba(0, 240, 255, 0.08)';
+      ctx.fillRect(cx - 340, cy - 110, 120, 180);
+      ctx.fillStyle = '#00f0ff';
+      ctx.font = '8px JetBrains Mono';
+      ctx.fillText('BLD-NW-01 [STENCIL: 1]', cx - 335, cy - 115);
+
+      // Right Building Outline
+      ctx.strokeRect(cx + 220, cy - 120, 130, 190);
+      ctx.fillStyle = 'rgba(0, 240, 255, 0.08)';
+      ctx.fillRect(cx + 220, cy - 120, 130, 190);
+      ctx.fillText('BLD-NE-01 [STENCIL: 1]', cx + 225, cy - 125);
+
+      // Stone Wall Barrier (Occlusion Detour)
+      ctx.strokeStyle = 'rgba(255, 170, 0, 0.6)';
+      ctx.strokeRect(cx - 160, cy - 35, 45, 60);
+      ctx.fillStyle = '#ffaa00';
+      ctx.fillText('SM_H_StoneWall_00A', cx - 160, cy - 40);
+
+      // Dynamic Red Diamond Reticles for Hostiles
+      drawVisorTargetReticles(cx, cy);
+    }
+
+    // Dynamic Reticle Drawing
+    function drawVisorTargetReticles(cx, cy) {
+      const hFov = 75.0;
+
+      // Central Reticle Crosshairs
+      ctx.strokeStyle = 'rgba(0, 240, 255, 0.8)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(cx, cy, 12, 0, Math.PI * 2);
+      ctx.moveTo(cx - 30, cy); ctx.lineTo(cx - 16, cy);
+      ctx.moveTo(cx + 16, cy); ctx.lineTo(cx + 30, cy);
+      ctx.moveTo(cx, cy - 30); ctx.lineTo(cx, cy - 16);
+      ctx.moveTo(cx, cy + 16); ctx.lineTo(cx, cy + 30);
+      ctx.stroke();
+
+      threats.forEach(t => {
+        // Compute relative azimuth
+        const soldierPos = { x: -21.0, y: -280.0 }; // street entrance
+        const dx = t.x - soldierPos.x;
+        const dy = t.y - soldierPos.y;
+        const targetAzimuth = (Math.atan2(dx, dy) * 180 / Math.PI + 360) % 360;
+        let relAz = targetAzimuth - currentHeading;
+        while (relAz > 180) relAz -= 360;
+        while (relAz < -180) relAz += 360;
+
+        const distanceM = t.distance_m || Math.sqrt(dx * dx + dy * dy);
+
+        if (Math.abs(relAz) <= (hFov / 2)) {
+          const sx = cx + (relAz / (hFov / 2)) * (canvas.width * 0.44);
+          const distScale = Math.max(0.55, Math.min(1.5, 35.0 / Math.max(5.0, distanceM)));
+          const sy = cy + 40 * distScale;
+          const boxSize = 22 * distScale;
+
+          ctx.save();
+          ctx.translate(sx, sy);
+
+          // Red MIL-STD-2525 Diamond Bracket
+          ctx.strokeStyle = '#ff2233';
+          ctx.lineWidth = 2.0;
+          ctx.beginPath();
+          ctx.moveTo(0, -boxSize);
+          ctx.lineTo(boxSize, 0);
+          ctx.lineTo(0, boxSize);
+          ctx.lineTo(-boxSize, 0);
+          ctx.closePath();
+          ctx.stroke();
+
+          ctx.fillStyle = t.inside_50m ? '#ff2233' : '#ff7700';
+          ctx.beginPath(); ctx.arc(0, 0, 3, 0, Math.PI * 2); ctx.fill();
+
+          // Rangefinder Callout Box
+          const callsign = ["Alpha", "Bravo", "Charlie", "Delta", "Echo"][((t.track_id - 1) % 5)] || `T-${t.track_id}`;
+          const isCoasting = (t.state === 'COASTING');
+          const stateTag = isCoasting ? ' [COASTING - OCCLUDED]' : ' [LOCKED]';
+
+          ctx.fillStyle = 'rgba(6, 12, 20, 0.9)';
+          ctx.fillRect(-boxSize - 6, -boxSize - 32, 160, 26);
+          ctx.strokeStyle = isCoasting ? '#ffaa00' : '#ff2233';
+          ctx.lineWidth = 1;
+          ctx.strokeRect(-boxSize - 6, -boxSize - 32, 160, 26);
+
+          ctx.fillStyle = isCoasting ? '#ffaa00' : '#ff3344';
+          ctx.font = 'bold 10px JetBrains Mono';
+          ctx.fillText(`[TARGET ${t.track_id}] ${callsign}${stateTag}`, -boxSize - 2, -boxSize - 18);
+
+          ctx.fillStyle = '#ffffff';
+          ctx.font = '9px JetBrains Mono';
+          ctx.fillText(`RNG: ${distanceM.toFixed(1)}m | SPD: ${t.speed_mps}m/s`, -boxSize - 2, -boxSize - 8);
+
+          ctx.restore();
+        } else {
+          // Off-screen indicator
+          const isRight = relAz > 0;
+          ctx.fillStyle = '#ff2233';
+          ctx.font = 'bold 10px JetBrains Mono';
+          ctx.fillText(isRight ? `TARGET ${t.track_id} ▶` : `◀ TARGET ${t.track_id}`, isRight ? canvas.width - 110 : 16, cy);
+        }
+      });
+    }
+
+    // -------------------------------------------------------------
+    // POV 2: UAV AERIAL CHASE VIEW (+30m Chase Camera)
+    // -------------------------------------------------------------
+    function drawUavAerialChase() {
+      const cx = canvas.width / 2;
+      const cy = canvas.height / 2;
+
+      // Dark Atmosphere with Aerial Horizon
+      ctx.fillStyle = '#020408';
+      ctx.fillRect(0, 0, canvas.width, cy * 0.7);
+      ctx.fillStyle = '#060d16';
+      ctx.fillRect(0, cy * 0.7, canvas.width, canvas.height - cy * 0.7);
+
+      // Downward LiDAR Searchlight Cone
+      ctx.save();
+      ctx.translate(cx, cy + 30);
+      const coneGrad = ctx.createRadialGradient(0, 0, 10, 0, 160, 220);
+      coneGrad.addColorStop(0, 'rgba(0, 240, 255, 0.35)');
+      coneGrad.addColorStop(1, 'rgba(0, 240, 255, 0.0)');
+      ctx.fillStyle = coneGrad;
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(-240, 260);
+      ctx.lineTo(240, 260);
+      ctx.closePath();
+      ctx.fill();
+
+      // Authentic Autopilot Aircraft Drone Body Drawing (from Fab Assets)
+      ctx.fillStyle = '#1b2a3a';
+      ctx.strokeStyle = '#00f0ff';
+      ctx.lineWidth = 2.0;
+
+      // Fuselage & Delta Wings
+      ctx.beginPath();
+      ctx.moveTo(0, -35); // Nose
+      ctx.lineTo(16, -10);
+      ctx.lineTo(85, 20); // Right Wingtip
+      ctx.lineTo(20, 25);
+      ctx.lineTo(10, 45); // Tail
+      ctx.lineTo(-10, 45);
+      ctx.lineTo(-20, 25);
+      ctx.lineTo(-85, 20); // Left Wingtip
+      ctx.lineTo(-16, -10);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      // Wingtip Navigation Lights
+      ctx.fillStyle = '#00ff88';
+      ctx.beginPath(); ctx.arc(83, 20, 4, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#ff2233';
+      ctx.beginPath(); ctx.arc(-83, 20, 4, 0, Math.PI * 2); ctx.fill();
+
+      // Central Sensor Pod
+      ctx.fillStyle = '#00f0ff';
+      ctx.beginPath(); ctx.arc(0, 5, 6, 0, Math.PI * 2); ctx.fill();
+
+      // Dynamic Physical Tether Cable Dangling to UGV Rover
+      ctx.strokeStyle = 'rgba(255, 200, 0, 0.85)';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(0, 15);
+      // Catenary sag curve
+      ctx.quadraticCurveTo(25, 120, 15, 250);
+      ctx.stroke();
+      ctx.fillStyle = '#ffaa00';
+      ctx.font = 'bold 9px JetBrains Mono';
+      ctx.fillText(`TETHER: ${tetherLength}m [${tetherStatus}]`, 35, 130);
+
+      ctx.restore();
+
+      // On-screen telemetry banner for UAV
+      ctx.fillStyle = '#00f0ff';
+      ctx.font = 'bold 12px JetBrains Mono';
+      ctx.fillText(`[POV 2: UAV AERIAL ORBIT] ALT: +${(uavPose.z || 30.0).toFixed(1)}m | SPD: 5.0 m/s | 32-CH NADIR LIDAR`, 18, 30);
+    }
+
+    // -------------------------------------------------------------
+    // POV 3: UGV ROVER DASH (Mitsubishi Evo RC Car)
+    // -------------------------------------------------------------
+    function drawUgvRoverDash() {
+      const cx = canvas.width / 2;
+      const cy = canvas.height / 2;
+
+      // Ground Cobblestone Road View
+      ctx.fillStyle = '#040810';
+      ctx.fillRect(0, 0, canvas.width, cy);
+      ctx.fillStyle = '#08101a';
+      ctx.fillRect(0, cy, canvas.width, canvas.height - cy);
+
+      // Forward Dual Headlight Beams
+      const beamGrad = ctx.createRadialGradient(cx, canvas.height, 20, cx, cy, 320);
+      beamGrad.addColorStop(0, 'rgba(255, 240, 180, 0.45)');
+      beamGrad.addColorStop(1, 'rgba(255, 240, 180, 0.0)');
+      ctx.fillStyle = beamGrad;
+      ctx.beginPath();
+      ctx.moveTo(cx - 80, canvas.height);
+      ctx.lineTo(cx - 260, cy - 20);
+      ctx.lineTo(cx + 260, cy - 20);
+      ctx.lineTo(cx + 80, canvas.height);
+      ctx.closePath();
+      ctx.fill();
+
+      // 16-Channel Frontal LiDAR Scan Fan
+      ctx.strokeStyle = 'rgba(0, 255, 136, 0.35)';
+      ctx.lineWidth = 1.0;
+      for (let ch = -7; ch <= 7; ch++) {
+        ctx.beginPath();
+        ctx.moveTo(cx, canvas.height - 40);
+        ctx.lineTo(cx + ch * 35, cy - 10);
+        ctx.stroke();
+      }
+
+      // Mitsubishi Evo Hood / Chassis Silhouette
+      ctx.fillStyle = '#99111b'; // Metallic Red Car
+      ctx.strokeStyle = '#e0222f';
+      ctx.lineWidth = 2.0;
+      ctx.beginPath();
+      ctx.moveTo(cx - 240, canvas.height);
+      ctx.lineTo(cx - 160, canvas.height - 75);
+      ctx.lineTo(cx + 160, canvas.height - 75);
+      ctx.lineTo(cx + 240, canvas.height);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      // Hood Vents & RC Tether Mount
+      ctx.fillStyle = '#111a24';
+      ctx.fillRect(cx - 50, canvas.height - 65, 100, 16);
+      ctx.fillStyle = '#ffaa00';
+      ctx.beginPath(); ctx.arc(cx, canvas.height - 57, 5, 0, Math.PI * 2); ctx.fill();
+      ctx.fillText('TETHER MOUNT', cx - 35, canvas.height - 70);
+
+      // Tether Cable Stretching Up to Drone
+      ctx.strokeStyle = 'rgba(255, 200, 0, 0.7)';
+      ctx.lineWidth = 2.0;
+      ctx.beginPath();
+      ctx.moveTo(cx, canvas.height - 57);
+      ctx.lineTo(cx + 80, 0);
+      ctx.stroke();
+
+      ctx.fillStyle = '#00ff88';
+      ctx.font = 'bold 12px JetBrains Mono';
+      ctx.fillText(`[POV 3: UGV ROVER DASH] MITSUBISHI EVO RC CAR | 16-CH FORWARD SCAN | 3.0 m/s`, 18, 30);
+    }
+
+    // -------------------------------------------------------------
+    // POV 4: ATAK TACTICAL MAP (2.5D Radar / Foveated MLS)
+    // -------------------------------------------------------------
+    function drawAtakTacticalMap() {
+      const cx = canvas.width / 2;
+      const cy = canvas.height / 2;
+      const scale = Math.min(canvas.width, canvas.height) / 120.0;
+
+      // Range Rings
+      const rings = [
+        { r: 10, col: '#00f0ff22', label: '10m CQB' },
+        { r: 25, col: '#00f0ff44', label: '25m' },
+        { r: 50, col: '#ff223388', label: '50m WEAPONS ENGAGEMENT ZONE' },
+        { r: 75, col: '#ffffff18', label: '75m' }
+      ];
       rings.forEach(ring => {
         ctx.beginPath();
         ctx.arc(cx, cy, ring.r * scale, 0, Math.PI * 2);
         ctx.strokeStyle = ring.col;
         ctx.lineWidth = ring.r === 50 ? 2 : 1;
-        ctx.setLineDash(ring.dash);
         ctx.stroke();
-        ctx.setLineDash([]);
-
         ctx.fillStyle = ring.r === 50 ? '#ff3344' : '#627b94';
-        ctx.font = '10px JetBrains Mono';
+        ctx.font = '9px JetBrains Mono';
         ctx.fillText(ring.label, cx + 6, cy - (ring.r * scale) + 12);
       });
 
-      // Designated Structure Footprint from C2
-      if (designatedStructure) {
-        const sx = cx + (designatedStructure.x * scale);
-        const sy = cy - (designatedStructure.y * scale);
-        const sw = designatedStructure.width * scale;
-        const sh = designatedStructure.length * scale;
+      // Draw Drone & Tether Line on Map
+      const uavPx = cx + (uavPose.x * scale * 0.6);
+      const uavPy = cy - (uavPose.y * scale * 0.6);
+      const ugvPx = cx + (ugvPose.x * scale * 0.6);
+      const ugvPy = cy - (ugvPose.y * scale * 0.6);
 
-        ctx.fillStyle = 'rgba(0, 240, 255, 0.2)';
-        ctx.fillRect(sx - sw/2, sy - sh/2, sw, sh);
-        ctx.strokeStyle = '#00f0ff';
-        ctx.lineWidth = 2;
-        ctx.strokeRect(sx - sw/2, sy - sh/2, sw, sh);
+      // Tether line
+      ctx.strokeStyle = 'rgba(255, 170, 0, 0.7)';
+      ctx.setLineDash([4, 4]);
+      ctx.beginPath();
+      ctx.moveTo(uavPx, uavPy); ctx.lineTo(ugvPx, ugvPy);
+      ctx.stroke();
+      ctx.setLineDash([]);
 
-        ctx.fillStyle = '#00f0ff';
-        ctx.font = 'bold 9px JetBrains Mono';
-        ctx.fillText(`${designatedStructure.id}`, sx - sw/2, sy - sh/2 - 4);
-      }
+      // Drone Icon (Cyan Delta)
+      ctx.fillStyle = '#00f0ff';
+      ctx.beginPath();
+      ctx.arc(uavPx, uavPy, 7, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#00f0ff';
+      ctx.fillText('UAV-01', uavPx + 10, uavPy + 4);
 
-      // Threat Contacts (MIL-STD Hostiles)
+      // Rover Icon (Orange Square)
+      ctx.fillStyle = '#ff7700';
+      ctx.fillRect(ugvPx - 5, ugvPy - 5, 10, 10);
+      ctx.fillText('UGV-ROVER', ugvPx + 8, ugvPy + 4);
+
+      // Threats
       threats.forEach(t => {
-        const px = cx + (t.x * scale);
-        const py = cy - (t.y * scale);
+        const tx = cx + (t.x * scale * 0.6);
+        const ty = cy - (t.y * scale * 0.6);
 
-        ctx.save();
-        ctx.translate(px, py);
-
-        // Hostile Diamond
+        ctx.fillStyle = t.inside_50m ? '#ff2233' : '#ff7700';
         ctx.beginPath();
-        ctx.moveTo(0, -9); ctx.lineTo(9, 0); ctx.lineTo(0, 9); ctx.lineTo(-9, 0);
+        ctx.moveTo(tx, ty - 8); ctx.lineTo(tx + 8, ty); ctx.lineTo(tx, ty + 8); ctx.lineTo(tx - 8, ty);
         ctx.closePath();
-        ctx.fillStyle = t.inside_50m ? '#ff2233' : '#ff7733';
         ctx.fill();
-        ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = 1.5;
-        ctx.stroke();
-
-        // Velocity Vector Arrow
-        if (t.speed_mps > 0.1) {
-          const headingRad = (t.heading_deg * Math.PI) / 180;
-          const vx = Math.sin(headingRad) * t.speed_mps * scale * 1.5;
-          const vy = -Math.cos(headingRad) * t.speed_mps * scale * 1.5;
-          ctx.beginPath();
-          ctx.moveTo(0, 0); ctx.lineTo(vx, vy);
-          ctx.strokeStyle = '#ff3344';
-          ctx.lineWidth = 2;
-          ctx.stroke();
-        }
-
-        // Callout label
-        const callsign = ["Alpha", "Bravo", "Charlie", "Delta", "Echo", "Foxtrot", "Golf"][((t.track_id - 1) % 7)] || `T-${t.track_id}`;
         ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 10px JetBrains Mono';
-        ctx.fillText(`H-${String(t.track_id).padStart(2, '0')} (${callsign})`, 12, -2);
-        ctx.fillStyle = t.inside_50m ? '#ff4455' : '#8fa6bc';
-        ctx.font = '9px JetBrains Mono';
-        ctx.fillText(`${t.distance_m}m | ${t.speed_mps}m/s`, 12, 10);
-
-        ctx.restore();
+        ctx.font = 'bold 9px JetBrains Mono';
+        ctx.fillText(`H-${t.track_id} (${t.distance_m}m)`, tx + 10, ty + 3);
       });
 
-      // Soldier Center Marker (Cyan Chevron rotated to heading)
-      ctx.save();
-      ctx.translate(cx, cy);
-      ctx.rotate((currentHeading * Math.PI) / 180);
-
-      // Vision Cone (60° Forward FOV)
+      // Soldier Center Marker
+      ctx.fillStyle = '#00ff88';
       ctx.beginPath();
-      ctx.moveTo(0, 0);
-      ctx.arc(0, 0, 45 * scale, -Math.PI / 2 - Math.PI / 6, -Math.PI / 2 + Math.PI / 6);
+      ctx.moveTo(cx, cy - 10); ctx.lineTo(cx + 8, cy + 8); ctx.lineTo(cx, cy + 4); ctx.lineTo(cx - 8, cy + 8);
       ctx.closePath();
-      ctx.fillStyle = 'rgba(0, 240, 255, 0.07)';
       ctx.fill();
-
-      // Chevron
-      ctx.beginPath();
-      ctx.moveTo(0, -12); ctx.lineTo(9, 10); ctx.lineTo(0, 5); ctx.lineTo(-9, 10);
-      ctx.closePath();
-      ctx.fillStyle = '#00f0ff';
-      ctx.fill();
-      ctx.strokeStyle = '#ffffff';
-      ctx.lineWidth = 1.5;
-      ctx.stroke();
-
-      ctx.restore();
     }
 
     // -------------------------------------------------------------
-    // RENDER MODE B: FIRST-PERSON AR CAMERA RETICLE
+    // PiP TOP-DOWN UAV NADIR FEED
     // -------------------------------------------------------------
-    function drawCameraReticle() {
-      const cx = canvas.width / 2;
-      const cy = canvas.height / 2 + (cameraPitch * 3.5); // pitch adjusts horizon vertically
+    function drawPipNadirFeed() {
+      pipCtx.clearRect(0, 0, pipCanvas.width, pipCanvas.height);
+      const pcx = pipCanvas.width / 2;
+      const pcy = pipCanvas.height / 2;
+      const pScale = 2.0;
 
-      // 1. Draw Camera video background or Synthetic FLIR visor
-      if (isCameraActive && video.readyState === video.HAVE_ENOUGH_DATA) {
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        // Tactical dark overlay for high HUD contrast
-        ctx.fillStyle = 'rgba(4, 8, 14, 0.35)';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-      } else {
-        // Synthetic Night Vision / Tactical Visor grid
-        ctx.fillStyle = '#040910';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      // Drone Belly Gimbal Viewport
+      pipCtx.fillStyle = '#050a12';
+      pipCtx.fillRect(0, 0, pipCanvas.width, pipCanvas.height);
 
-        // Grid lines
-        ctx.strokeStyle = 'rgba(0, 240, 255, 0.08)';
-        ctx.lineWidth = 1;
-        for (let x = 0; x < canvas.width; x += 40) {
-          ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
-        }
-        for (let y = 0; y < canvas.height; y += 40) {
-          ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
-        }
-
-        // Horizon line
-        ctx.strokeStyle = 'rgba(0, 240, 255, 0.4)';
-        ctx.lineWidth = 1.5;
-        ctx.beginPath();
-        ctx.moveTo(cx - 160, cy); ctx.lineTo(cx - 40, cy);
-        ctx.moveTo(cx + 40, cy); ctx.lineTo(cx + 160, cy);
-        ctx.stroke();
-
-        ctx.fillStyle = 'rgba(0, 240, 255, 0.5)';
-        ctx.font = '10px JetBrains Mono';
-        ctx.fillText('HORIZON', cx + 165, cy + 4);
-      }
-
-      // 2. Pitch Ladder Markings (+10, +20, -10, -20)
-      [-20, -10, 10, 20].forEach(p => {
-        const py = cy - (p * 5.0);
-        ctx.strokeStyle = 'rgba(0, 240, 255, 0.3)';
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.moveTo(cx - 45, py); ctx.lineTo(cx - 15, py);
-        ctx.moveTo(cx + 15, py); ctx.lineTo(cx + 45, py);
-        ctx.stroke();
-        ctx.fillStyle = 'rgba(0, 240, 255, 0.5)';
-        ctx.font = '9px JetBrains Mono';
-        ctx.fillText(`${p > 0 ? '+' : ''}${p}°`, cx + 50, py + 3);
+      // Concentric Nadir Scan Rings
+      pipCtx.strokeStyle = 'rgba(0, 240, 255, 0.2)';
+      pipCtx.lineWidth = 1;
+      [15, 30, 45].forEach(r => {
+        pipCtx.beginPath();
+        pipCtx.arc(pcx, pcy, r * pScale, 0, Math.PI * 2);
+        pipCtx.stroke();
       });
 
-      // 3. Central Mil-Dot Crosshair Reticle
-      ctx.strokeStyle = '#00f0ff';
-      ctx.lineWidth = 1.5;
+      // Center Drone Crosshairs
+      pipCtx.strokeStyle = '#00f0ff';
+      pipCtx.beginPath();
+      pipCtx.moveTo(pcx - 12, pcy); pipCtx.lineTo(pcx + 12, pcy);
+      pipCtx.moveTo(pcx, pcy - 12); pipCtx.lineTo(pcx, pcy + 12);
+      pipCtx.stroke();
 
-      // Central ring & gap
-      ctx.beginPath();
-      ctx.arc(cx, cy, 14, 0, Math.PI * 2);
-      ctx.stroke();
-
-      ctx.beginPath();
-      ctx.arc(cx, cy, 2, 0, Math.PI * 2);
-      ctx.fillStyle = '#00f0ff';
-      ctx.fill();
-
-      // Crosshairs with mil-dots
-      ctx.beginPath();
-      ctx.moveTo(cx - 80, cy); ctx.lineTo(cx - 24, cy);
-      ctx.moveTo(cx + 24, cy); ctx.lineTo(cx + 80, cy);
-      ctx.moveTo(cx, cy - 80); ctx.lineTo(cx, cy - 24);
-      ctx.moveTo(cx, cy + 24); ctx.lineTo(cx, cy + 80);
-      ctx.stroke();
-
-      // Rangefinder corner brackets
-      const bSize = 60;
-      ctx.strokeStyle = 'rgba(0, 240, 255, 0.5)';
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.moveTo(cx - bSize, cy - bSize + 15); ctx.lineTo(cx - bSize, cy - bSize); ctx.lineTo(cx - bSize + 15, cy - bSize);
-      ctx.moveTo(cx + bSize - 15, cy - bSize); ctx.lineTo(cx + bSize, cy - bSize); ctx.lineTo(cx + bSize, cy - bSize + 15);
-      ctx.moveTo(cx - bSize, cy + bSize - 15); ctx.lineTo(cx - bSize, cy + bSize); ctx.lineTo(cx - bSize + 15, cy + bSize);
-      ctx.moveTo(cx + bSize - 15, cy + bSize); ctx.lineTo(cx + bSize, cy + bSize); ctx.lineTo(cx + bSize, cy + bSize - 15);
-      ctx.stroke();
-
-      // 4. Project Augmented Reality Threat Lock Reticles
-      const hFov = 70.0; // 70-degree horizontal field of view
+      // Hostile Positions from Above
       threats.forEach(t => {
-        // Compute relative azimuth from soldier to threat
-        const threatAzimuth = (Math.atan2(t.x, t.y) * 180 / Math.PI + 360) % 360;
-        let relAz = threatAzimuth - currentHeading;
-        while (relAz > 180) relAz -= 360;
-        while (relAz < -180) relAz += 360;
-
-        if (Math.abs(relAz) <= (hFov / 2)) {
-          // Inside Screen Field of View
-          const sx = cx + (relAz / (hFov / 2)) * (canvas.width * 0.44);
-          const sy = cy - ((t.z || 0) * 12.0);
-          const distScale = Math.max(0.6, Math.min(1.4, 30.0 / (t.distance_m || 20.0)));
-          const boxSize = 24 * distScale;
-
-          ctx.save();
-          ctx.translate(sx, sy);
-
-          // 3D Augmented Reality Red Corner Brackets
-          ctx.strokeStyle = '#ff2233';
-          ctx.lineWidth = 2.0;
-          ctx.beginPath();
-          ctx.moveTo(-boxSize, -boxSize + 8); ctx.lineTo(-boxSize, -boxSize); ctx.lineTo(-boxSize + 8, -boxSize);
-          ctx.moveTo(boxSize - 8, -boxSize); ctx.lineTo(boxSize, -boxSize); ctx.lineTo(boxSize, -boxSize + 8);
-          ctx.moveTo(-boxSize, boxSize - 8); ctx.lineTo(-boxSize, boxSize); ctx.lineTo(-boxSize + 8, boxSize);
-          ctx.moveTo(boxSize - 8, boxSize); ctx.lineTo(boxSize, boxSize); ctx.lineTo(boxSize, boxSize - 8);
-          ctx.stroke();
-
-          // Center hostile dot
-          ctx.fillStyle = '#ff2233';
-          ctx.beginPath(); ctx.arc(0, 0, 3, 0, Math.PI * 2); ctx.fill();
-
-          // Floating AR Callout Label
-          const callsign = ["Alpha", "Bravo", "Charlie", "Delta", "Echo", "Foxtrot", "Golf"][((t.track_id - 1) % 7)] || `T-${t.track_id}`;
-          const label = `[H-${String(t.track_id).padStart(2, '0')}] ${callsign}`;
-          ctx.fillStyle = 'rgba(8, 14, 22, 0.9)';
-          ctx.fillRect(-boxSize - 4, -boxSize - 28, 140, 24);
-          ctx.strokeStyle = '#ff2233';
-          ctx.lineWidth = 1;
-          ctx.strokeRect(-boxSize - 4, -boxSize - 28, 140, 24);
-
-          ctx.fillStyle = '#ff3344';
-          ctx.font = 'bold 10px JetBrains Mono';
-          ctx.fillText(label, -boxSize, -boxSize - 14);
-
-          ctx.fillStyle = '#ffffff';
-          ctx.font = '9px JetBrains Mono';
-          ctx.fillText(`RNG: ${t.distance_m}m | ${t.speed_mps}m/s`, -boxSize, -boxSize - 3);
-
-          ctx.restore();
-        } else {
-          // Outside FOV -> Render Off-Screen Directional Indicator Arrow at canvas edge
-          const isRight = relAz > 0;
-          const arrowX = isRight ? canvas.width - 32 : 32;
-          const arrowY = cy;
-
-          ctx.fillStyle = '#ff2233';
-          ctx.font = 'bold 10px JetBrains Mono';
-          ctx.textAlign = isRight ? 'right' : 'left';
-          ctx.fillText(isRight ? `H-${t.track_id} (${Math.round(relAz)}°) ▶` : `◀ H-${t.track_id} (${Math.round(relAz)}°)`, isRight ? arrowX - 10 : arrowX + 10, arrowY + 4);
-          ctx.textAlign = 'start';
-        }
+        const dx = (t.x - uavPose.x) * pScale;
+        const dy = -(t.y - uavPose.y) * pScale;
+        pipCtx.fillStyle = '#ff2233';
+        pipCtx.beginPath();
+        pipCtx.arc(pcx + dx, pcy + dy, 4, 0, Math.PI * 2);
+        pipCtx.fill();
+        pipCtx.fillStyle = '#ffffff';
+        pipCtx.font = '8px JetBrains Mono';
+        pipCtx.fillText(`H-${t.track_id}`, pcx + dx + 6, pcy + dy + 3);
       });
-
-      // 5. Project Designated Structure AR Reticle
-      if (designatedStructure) {
-        const sAz = (Math.atan2(designatedStructure.x, designatedStructure.y) * 180 / Math.PI + 360) % 360;
-        let sRel = sAz - currentHeading;
-        while (sRel > 180) sRel -= 360;
-        while (sRel < -180) sRel += 360;
-
-        if (Math.abs(sRel) <= (hFov / 2)) {
-          const sx = cx + (sRel / (hFov / 2)) * (canvas.width * 0.44);
-          const sy = cy - 20;
-
-          ctx.strokeStyle = '#00f0ff';
-          ctx.lineWidth = 2;
-          ctx.strokeRect(sx - 35, sy - 25, 70, 50);
-
-          ctx.fillStyle = 'rgba(0, 240, 255, 0.9)';
-          ctx.font = 'bold 10px JetBrains Mono';
-          ctx.fillText(`TARGET: ${designatedStructure.id}`, sx - 35, sy - 32);
-          ctx.fillStyle = '#ffffff';
-          ctx.font = '9px JetBrains Mono';
-          ctx.fillText(`${designatedStructure.length}m×${designatedStructure.width}m×${designatedStructure.height}m`, sx - 35, sy + 38);
-        }
-      }
     }
   </script>
 </body>

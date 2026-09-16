@@ -29,6 +29,9 @@ class _UdpProtocolHandler(asyncio.DatagramProtocol):
     def error_received(self, exc: Exception):
         pass
 
+    def connection_lost(self, exc: Optional[Exception]):
+        pass
+
 class AsyncUdpReceiver:
     """Async UDP socket server managing non-blocking packet ingestion."""
 

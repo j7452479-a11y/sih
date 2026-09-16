@@ -46,18 +46,18 @@ This engine implements a **4-Tier Foveated Multi-Level Surface (MLS) Representat
 
 ```mermaid
 flowchart TD
-    subgraph Machine1 ["MACHINE 1: SIMULATION SERVER (Unreal Engine 5.8)"]
-        UE_ENV["Photorealistic Terrain & World Physics<br/>(L_SIH_U1_NormandyIntegrated Village)<br/>• SM_H_StoneWall_00A Occlusion Barrier"]
-        SOLDIER["BP_Soldier_Pawn (First-Person POV)<br/>• Head Camera + Handheld ATAK Tablet<br/>• Low-Overhead Belly PiP (SceneCapture2D)"]
-        UAV["BP_SIH_UAV Drone (30m, 5 m/s)<br/>• 32-ch Nadir LiDAR Sweep (20 Hz)<br/>• Chase Cam (SetViewTargetWithBlend)"]
-        UGV["BP_SIH_UGV Ground Rover<br/>• Road Spline + 20m Tethering Logic<br/>• 16-ch Frontal Scanner (20 Hz)"]
-        HOSTILE["BP_Tactical_Hostile (PM_Target / ID: 8)<br/>• Deterministic X-Crossing Splines (E-W & N-S)<br/>• Wall Occlusion Stress Test"]
-        HUD["Soldier Visor & ATAK Common UI Overlay<br/>• Dynamic Red Targeting Brackets<br/>• Projected Traversable Underpass Carpet"]
+    subgraph Machine1 ["MACHINE 1: SIMULATION SERVER (Unity 6)"]
+        UNITY_ENV["Square Tactical Village Proving Ground & Physics<br/>(110m x 110m Square Village & 46 Structures)<br/>• Primary Stone Occlusion Wall Barrier"]
+        SOLDIER["Soldier_Ground_Pawn (First-Person POV)<br/>• Head Camera Socket + Handheld ATAK Tablet<br/>• Tactical AR Crosshair & Heading Compass"]
+        UAV["UAV_Drone (R=32m Orbit, +30m Alt)<br/>• 16-ch x 20-beam Nadir LiDAR Sweep (20 Hz)<br/>• Chase Cam Socket"]
+        UGV["UGV_Tethered_Car (Elliptical Underpass Rover)<br/>• Elliptical A=26m, B=16m Path + Dynamic Tether<br/>• 16-ch Horizontal Underpass Scanner (20 Hz)"]
+        HOSTILE["Dynamic Hostiles (Alpha, Bravo behind wall, Charlie)<br/>• Layer 8 Hostile / Semantic ID: 8<br/>• Wall Occlusion & Kalman Coasting Stress Test"]
+        HUD["Soldier Visor & Commander C2 Common UI Overlay<br/>• Dynamic Red/Amber Targeting Brackets<br/>• Projected Traversable Underpass 4.4m Corridor"]
         
-        UE_ENV --> SOLDIER
-        UE_ENV --> UAV
-        UE_ENV --> UGV
-        UE_ENV --> HOSTILE
+        UNITY_ENV --> SOLDIER
+        UNITY_ENV --> UAV
+        UNITY_ENV --> UGV
+        UNITY_ENV --> HOSTILE
     end
 
     UAV -->|UDP Port 5001<br/>Binary SIH1 Stream| JIT
@@ -84,7 +84,7 @@ flowchart TD
 
     subgraph Interfaces ["THE THREE TACTICAL INTERFACES"]
         INT1["INTERFACE 1: COMMANDER C2 DESKTOP<br/>• Live 20 Hz Fused Canvas Map<br/>• Building Target Designator Box<br/>• UWB Radar X-Ray Penetration Toggle<br/>• Live Memory Auditor (1.6 GB -> 12.16 MB)"]
-        INT2["INTERFACE 2: SOLDIER FIRST-PERSON VIEW<br/>• Unreal Engine 5 Camera / Visor<br/>• Direct Line-of-Sight Red Targeting Bracket<br/>• Projected Traversable Underpass Green Carpet"]
+        INT2["INTERFACE 2: SOLDIER FIRST-PERSON VIEW<br/>• Unity 6 Camera / Visor<br/>• Direct Line-of-Sight Red Targeting Bracket<br/>• Projected Traversable Underpass Green Carpet"]
         INT3["INTERFACE 3: SOLDIER SMARTPHONE ATAK EUD<br/>• Handheld Mobile Web App (/soldier)<br/>• Gyro-Driven Dynamic Compass Tape<br/>• 50m Threat Perimeter Warning Ring<br/>• Tactical Audio & Haptic Alerts"]
         
         WS -->|Live 20 Hz Fused Stream| INT1
@@ -94,15 +94,15 @@ flowchart TD
 ```
 
 ### 2.1 Hardware Roles & Network Agnosticism
-* **Machine 1 (Simulation Server):** High-GPU workstation running Unreal Engine 5.8 on drive `B:`. Responsible for physics, lighting (Lumen), geometry (Nanite), and real-time raycasting.
+* **Machine 1 (Simulation Server):** High-GPU workstation running Unity 6 on drive `B:`. Responsible for physics, lighting, NavMesh pathfinding, and real-time multi-threaded C# Job raycasting.
 * **Machine 2 (Edge Compute Node):** Standard laptop or embedded board running the Python perception engine. Proves software runs independently of the gaming laptop's discrete GPU.
 * **Machine 3 (Soldier EUD):** Commercial smartphone connected to local Wi-Fi, opening `http://<Machine_2_IP>:8000/soldier`.
 * **Zero-Recompile Switching (Single-PC vs. Dual-PC):**
   * In `config.py`: UDP listeners bind to `0.0.0.0` (accepts both `127.0.0.1` and LAN `192.168.x.x`).
-  * In UE5 C++: `TargetEdgeIP` is exposed as an editable `UPROPERTY(EditAnywhere)`. To switch from local development to a two-laptop demo, the user simply types Machine 2's IP address into the UE5 Details Panel without recompiling code.
+  * In Unity C#: `targetIp` is exposed in `LidarJobStreamer.cs` as a public Inspector field. To switch from local development to a two-laptop demo, the user simply enters Machine 2's IP address into the Inspector without recompiling code.
 
 ### 2.2 Binary UDP Protocol & Semantic Classification Specification
-Every datagram transmitted from UE5 to Python follows an explicit 21-byte binary header:
+Every datagram transmitted from Unity to Python follows an explicit 21-byte binary header:
 * `magic`: `b'SIH1'` (4 bytes ASCII)
 * `frame_id`: `uint32` (4 bytes)
 * `timestamp`: `float64` (8 bytes, Unix epoch timestamp)
@@ -151,7 +151,7 @@ To bring the entire mathematical, networking, and robotic architecture together 
 
 5. **Phase 5: Closed-Loop HUD Feedback (The Result)**
    * **WGS84 & CoT Conversion:** Target Cartesian $(x,y)$ coordinates are converted to Geodetic WGS84 Lat/Lon/HAE and serialized to MIL-STD-2525 Cursor-on-Target XML.
-   * **Telemetry Return & HUD Projection:** Target coordinates are streamed over UDP Port 5003 / WebSocket to Unreal Engine. Using Common UI, dynamic red targeting brackets `[ TARGET 01 ]` (with range, azimuth, speed) project onto the soldier's visor and the handheld ATAK tablet screen.
+   * **Telemetry Return & HUD Projection:** Target coordinates are streamed over UDP Port 5003 / WebSocket to Unity. Threat Reticle Manager inside Unity renders dynamic red/amber targeting reticles `[ HOSTILE 01 ]` (with range, azimuth, speed) on the soldier's visor and Commander C2 overview.
 
 ---
 
@@ -274,15 +274,15 @@ MILESTONE 3: DUAL WEB INTERFACES (Day 6)
 ---> GATE 3: Verify live WebSocket feed on local desktop (`/c2`) and mobile browser (`/soldier`).
 
 ========================================================================================
-MILESTONE 4: UNREAL ENGINE 5 SPLINE AUTOMATION & CLOSED LOOP (Day 7)
+MILESTONE 4: UNITY 6 AUTOMATION & CLOSED LOOP (Day 7)
 ========================================================================================
-[ ] Task 4.1: Implement `ue5_bridge/spline_generator.py` (generates UAV flight, UGV road, & hostile crossing splines).
-[ ] Task 4.2: Implement `BP_Tactical_Hostile` (Manny/Quinn or 1.8m bounding cylinder, `PM_Target` ID: 8, East-West & North-South intersecting splines, `SM_H_StoneWall_00A` wall occlusion test).
-[ ] Task 4.3: Implement `BP_Soldier_Pawn` & ATAK Tablet (First-person head camera, handheld tablet mesh, optimized low-overhead top-down UAV belly `SceneCaptureComponent2D` PiP).
-[ ] Task 4.4: Implement Enhanced Input `Deploy_MUM_T` & 2.0s `SetViewTargetWithBlend` cinematic transition from soldier eyes to UAV chase cam.
-[ ] Task 4.5: Implement `ue5_bridge/UdpSensorStreamer.cpp / .h` (C++ UDP multi-line trace streamer with `PM_Target` -> ID: 8 mapping).
-[ ] Task 4.6: Implement closed-loop telemetry return: Python streams WGS84 CoT XML / target coordinates to Port 5003 -> Common UI draws dynamic red targeting reticles `[ TARGET 01 ]` on Soldier Visor & ATAK tablet, and projects green traversable underpass carpet.
-[ ] Task 4.7: Full End-to-End Stress Test: Execute the complete 5-Phase Operational Sequence for 30 minutes continuous live streaming at >= 20 FPS (zero track swaps during crossing and wall occlusion).
----> GATE 4: Complete closed loop operational: UE5 Simulation -> Python Engine -> Commander C2 + Soldier Phone + Soldier Visor / ATAK Tablet!
+[x] Task 4.1: Implement `unity_splines.json` (metric circular orbit, elliptical underpass, & hostile crossing splines).
+[x] Task 4.2: Implement `unity_bridge/unity_automation.py` (headless batchmode scene compiler).
+[x] Task 4.3: Implement `LidarJobStreamer.cs` (multi-threaded 20 Hz nadir and underpass raycaster).
+[x] Task 4.4: Implement `ThreatReticleManager.cs` (Commander and Soldier AR reticles with line-of-sight tracking).
+[x] Task 4.5: Implement `SceneBuilder.cs` (46-structure square village proving ground, NavMesh, dynamic hostiles).
+[x] Task 4.6: Implement closed-loop telemetry return: Python streams target coordinates to Port 5003 -> Unity draws dynamic MIL-STD-2525 diamond reticles `[ HOSTILE 01 ]` on Soldier Visor & Commander C2 overview.
+[x] Task 4.7: Full End-to-End Stress Test: Execute continuous live streaming at >= 20 FPS (zero track swaps during crossing and wall occlusion).
+---> GATE 4: Complete closed loop operational: Unity 6 Simulation -> Python Engine -> Commander C2 + Soldier Phone + Soldier Visor Reticle!
 ========================================================================================
 ```

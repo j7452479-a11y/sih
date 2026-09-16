@@ -1,0 +1,892 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>MUM-T TACTICAL 3D SIMULATOR & FOVEATED PROVING GROUND | SIH26053</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700;800&family=Outfit:wght@600;800&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <style>
+    :root {
+      --bg: #03060a;
+      --panel: rgba(6, 12, 22, 0.92);
+      --border: #142436;
+      --cyan: #00f0ff;
+      --green: #00ff88;
+      --red: #ff2233;
+      --amber: #ffaa00;
+      --purple: #b055ff;
+      --mono: 'JetBrains Mono', monospace;
+      --sans: 'Outfit', sans-serif;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+    body {
+      background: var(--bg);
+      color: #e2ecf7;
+      font-family: var(--mono);
+      overflow: hidden;
+      height: 100vh;
+      width: 100vw;
+    }
+
+    #webgl-canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+    }
+
+    /* TOP COMMAND BAR */
+    .top-bar {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 52px;
+      background: var(--panel);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      font-size: 13px;
+      z-index: 20;
+      backdrop-filter: blur(8px);
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 800;
+      letter-spacing: 1px;
+    }
+    .badge-live {
+      background: rgba(0, 255, 136, 0.15);
+      color: var(--green);
+      border: 1px solid var(--green);
+      padding: 3px 8px;
+      border-radius: 3px;
+      font-size: 11px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .dot-live {
+      width: 6px;
+      height: 6px;
+      background: var(--green);
+      border-radius: 50%;
+      animation: blink 1.2s infinite;
+    }
+    @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+    .telemetry-pills {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      font-size: 12px;
+    }
+    .pill {
+      background: rgba(20, 36, 54, 0.6);
+      border: 1px solid var(--border);
+      padding: 4px 10px;
+      border-radius: 4px;
+    }
+    .pill-val {
+      color: var(--cyan);
+      font-weight: 700;
+    }
+
+    /* COMPASS TAPE (FOR SOLDIER POV) */
+    .compass-container {
+      position: absolute;
+      top: 52px;
+      left: 0;
+      width: 100%;
+      height: 38px;
+      background: rgba(6, 12, 20, 0.88);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 20;
+      overflow: hidden;
+    }
+    .compass-needle {
+      position: absolute;
+      top: 0;
+      width: 2px;
+      height: 100%;
+      background: var(--cyan);
+      box-shadow: 0 0 8px var(--cyan);
+      z-index: 2;
+    }
+    .compass-tape {
+      display: flex;
+      position: absolute;
+      gap: 24px;
+      font-size: 11px;
+      font-weight: 700;
+      color: #738a9c;
+      transition: transform 0.05s linear;
+    }
+    .compass-tape span.cardinal {
+      color: var(--cyan);
+    }
+
+    /* PICTURE IN PICTURE (DRONE BELLY CAM) */
+    .pip-feed {
+      position: absolute;
+      top: 102px;
+      right: 20px;
+      width: 260px;
+      height: 170px;
+      background: #020509;
+      border: 1.5px solid var(--border);
+      border-radius: 6px;
+      z-index: 20;
+      overflow: hidden;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+    }
+    .pip-header {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 24px;
+      background: rgba(6, 12, 22, 0.9);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 10px;
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--cyan);
+      border-bottom: 1px solid var(--border);
+      z-index: 2;
+    }
+    #pipCanvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    /* FLOATING TACTICAL RETICLE & CALLOUTS ON SCREEN */
+    #hud-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    /* BOTTOM POV DOCK */
+    .bottom-bar {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      height: 54px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0 14px;
+      z-index: 20;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+      backdrop-filter: blur(10px);
+    }
+    .btn-pov {
+      background: rgba(14, 24, 38, 0.8);
+      border: 1px solid var(--border);
+      color: #92a9bd;
+      font-family: var(--mono);
+      font-size: 11px;
+      font-weight: 700;
+      padding: 8px 14px;
+      border-radius: 4px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+    .btn-pov:hover {
+      background: rgba(0, 240, 255, 0.15);
+      border-color: var(--cyan);
+      color: #ffffff;
+    }
+    .btn-pov.active {
+      background: var(--cyan);
+      border-color: var(--cyan);
+      color: #03060a;
+      box-shadow: 0 0 16px rgba(0, 240, 255, 0.4);
+    }
+
+    /* FOVEATED LEGEND */
+    .foveated-legend {
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 12px 16px;
+      font-size: 11px;
+      z-index: 20;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      pointer-events: none;
+    }
+    .legend-title {
+      color: #738a9c;
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+      margin-bottom: 2px;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .legend-ring {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      border: 1.5px solid;
+    }
+
+    /* TELEMETRY DRAWER */
+    .telemetry-drawer {
+      position: absolute;
+      top: 102px;
+      left: 20px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 14px;
+      font-size: 11px;
+      z-index: 20;
+      width: 260px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .drawer-title {
+      font-weight: 800;
+      color: var(--cyan);
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 6px;
+      display: flex;
+      justify-content: space-between;
+    }
+    .row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .row-label { color: #738a9c; }
+    .row-val { font-weight: 700; color: #ffffff; }
+  </style>
+</head>
+<body>
+
+  <!-- TOP HEADER -->
+  <div class="top-bar">
+    <div class="brand">
+      <span>SIH26053 FOVEATED 3D PROVING GROUND</span>
+      <div class="badge-live"><div class="dot-live"></div>LIVE 20 HZ</div>
+    </div>
+    <div class="telemetry-pills">
+      <div class="pill">SWaP RAM: <span class="pill-val">12.16 MB (-99.24%)</span></div>
+      <div class="pill">LATENCY: <span class="pill-val" id="dispLatency">1.17 ms</span></div>
+      <div class="pill">MLS CELLS: <span class="pill-val" id="dispCells">48,634</span></div>
+      <div class="pill">TETHER: <span class="pill-val" id="dispTether" style="color: var(--amber);">18.2m [NOMINAL]</span></div>
+    </div>
+  </div>
+
+  <!-- COMPASS TAPE (SOLDIER POV) -->
+  <div class="compass-container" id="compassContainer">
+    <div class="compass-needle"></div>
+    <div class="compass-tape" id="compassTape">
+      <!-- Generated via JS -->
+    </div>
+  </div>
+
+  <!-- LIVE TELEMETRY DRAWER -->
+  <div class="telemetry-drawer">
+    <div class="drawer-title">
+      <span>MUM-T KINEMATICS</span>
+      <span style="color: var(--green);">LOCKED</span>
+    </div>
+    <div class="row"><span class="row-label">UAV ORBIT:</span><span class="row-val" id="tUavPos">X: -21.0m, Y: 34.0m</span></div>
+    <div class="row"><span class="row-label">UAV ALTITUDE:</span><span class="row-val" style="color: var(--cyan);">+30.0m AGL (5.0 m/s)</span></div>
+    <div class="row"><span class="row-label">UGV RC CAR:</span><span class="row-val" id="tUgvPos">X: -21.0m, Y: 18.0m</span></div>
+    <div class="row"><span class="row-label">UGV SPEED:</span><span class="row-val">3.0 m/s (UNDERPASS PASS)</span></div>
+    <div class="row"><span class="row-label">TARGET ALPHA:</span><span class="row-val" style="color: var(--red);" id="tAlpha">LOCKED (72.4m)</span></div>
+    <div class="row"><span class="row-label">TARGET BRAVO:</span><span class="row-val" style="color: var(--amber);" id="tBravo">COASTING (WALL)</span></div>
+  </div>
+
+  <!-- PIP UAV BELLY CAMERA FEED -->
+  <div class="pip-feed">
+    <div class="pip-header">
+      <span>UAV-01 BELLY GIMBAL [NADIR]</span>
+      <span style="color: var(--green);">+30m</span>
+    </div>
+    <canvas id="pipCanvas"></canvas>
+  </div>
+
+  <!-- FOVEATED CONCENTRIC RINGS LEGEND -->
+  <div class="foveated-legend">
+    <div class="legend-title">CONCENTRIC FOVEATED TIERS</div>
+    <div class="legend-item"><div class="legend-ring" style="border-color: #ff3344; background: rgba(255,51,68,0.2);"></div><span>TIER 1: 10m (5cm Res - Bridge/Void)</span></div>
+    <div class="legend-item"><div class="legend-ring" style="border-color: #ffaa00; background: rgba(255,170,0,0.2);"></div><span>TIER 2: 30m (10cm Res - Enemies/Wall)</span></div>
+    <div class="legend-item"><div class="legend-ring" style="border-color: #00ff88; background: rgba(0,255,136,0.2);"></div><span>TIER 3: 60m (20cm Res - Church/Houses)</span></div>
+    <div class="legend-item"><div class="legend-ring" style="border-color: #00f0ff; background: rgba(0,240,255,0.2);"></div><span>TIER 4: 100m (50cm Res - Perimeter)</span></div>
+  </div>
+
+  <!-- BOTTOM MULTI-POV DOCK -->
+  <div class="bottom-bar">
+    <button class="btn-pov active" id="btnPov1" onclick="setCameraMode('soldier')">1: SOLDIER VISOR</button>
+    <button class="btn-pov" id="btnPov2" onclick="setCameraMode('uav')">2: UAV AERIAL CHASE</button>
+    <button class="btn-pov" id="btnPov3" onclick="setCameraMode('ugv')">3: UGV ROVER DASH</button>
+    <button class="btn-pov" id="btnPov4" onclick="setCameraMode('orbit')">4: COMMANDER POV</button>
+  </div>
+
+  <!-- HUD 2D OVERLAY (RED DIAMOND RETICLES) -->
+  <canvas id="hud-overlay"></canvas>
+
+  <!-- 3D WEBGL CANVAS CONTAINER -->
+  <div id="webgl-canvas"></div>
+
+  <script>
+    // -------------------------------------------------------------
+    // THREE.JS 3D SCENE SETUP
+    // -------------------------------------------------------------
+    const container = document.getElementById('webgl-canvas');
+    const hudCanvas = document.getElementById('hud-overlay');
+    const hudCtx = hudCanvas.getContext('2d');
+    const pipCanvas = document.getElementById('pipCanvas');
+    const pipCtx = pipCanvas.getContext('2d');
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x03060a);
+    scene.fog = new THREE.FogExp2(0x03060a, 0.005);
+
+    const camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    container.appendChild(renderer.domElement);
+
+    // -------------------------------------------------------------
+    // LIGHTING
+    // -------------------------------------------------------------
+    const ambientLight = new THREE.AmbientLight(0x223344, 1.2);
+    scene.add(ambientLight);
+
+    const moonLight = new THREE.DirectionalLight(0x88bbff, 1.5);
+    moonLight.position.set(50, 100, 50);
+    moonLight.castShadow = true;
+    moonLight.shadow.mapSize.width = 2048;
+    moonLight.shadow.mapSize.height = 2048;
+    moonLight.shadow.camera.near = 10;
+    moonLight.shadow.camera.far = 300;
+    moonLight.shadow.camera.left = -100;
+    moonLight.shadow.camera.right = 100;
+    moonLight.shadow.camera.top = 100;
+    moonLight.shadow.camera.bottom = -100;
+    scene.add(moonLight);
+
+    // -------------------------------------------------------------
+    // TACTICAL PROVING GROUND GEOMETRY (PAGE 54 OF PDF SPEC)
+    // -------------------------------------------------------------
+    // 1. Ground Plane (200m x 200m)
+    const groundGeo = new THREE.PlaneGeometry(220, 220);
+    const groundMat = new THREE.MeshStandardMaterial({ color: 0x0c131c, roughness: 0.9, metalness: 0.1 });
+    const ground = new THREE.Mesh(groundGeo, groundMat);
+    ground.rotation.x = -Math.PI / 2;
+    ground.receiveShadow = true;
+    scene.add(ground);
+
+    // 2. Central Cobblestone Road Network
+    const roadMat = new THREE.MeshStandardMaterial({ color: 0x182430, roughness: 0.8 });
+    // North-South Avenue (passing under the bridge)
+    const roadNS = new THREE.Mesh(new THREE.PlaneGeometry(10, 200), roadMat);
+    roadNS.rotation.x = -Math.PI / 2;
+    roadNS.position.set(0, 0.05, 0);
+    roadNS.receiveShadow = true;
+    scene.add(roadNS);
+
+    // East-West Cross Street
+    const roadEW = new THREE.Mesh(new THREE.PlaneGeometry(200, 10), roadMat);
+    roadEW.rotation.x = -Math.PI / 2;
+    roadEW.position.set(0, 0.05, 0);
+    roadEW.receiveShadow = true;
+    scene.add(roadEW);
+
+    // 3. Central Overpass / Bridge (Open Underpass Void for UGV)
+    const bridgeGroup = new THREE.Group();
+    const concreteMat = new THREE.MeshStandardMaterial({ color: 0x2c3b4d, roughness: 0.6 });
+    // Left & Right Abutment Columns
+    const colLeft = new THREE.Mesh(new THREE.BoxGeometry(2, 6, 12), concreteMat);
+    colLeft.position.set(-6, 3, 20);
+    colLeft.castShadow = true;
+    colLeft.receiveShadow = true;
+    bridgeGroup.add(colLeft);
+
+    const colRight = new THREE.Mesh(new THREE.BoxGeometry(2, 6, 12), concreteMat);
+    colRight.position.set(6, 3, 20);
+    colRight.castShadow = true;
+    colRight.receiveShadow = true;
+    bridgeGroup.add(colRight);
+
+    // Elevated Deck (Clearance 5.2m underneath)
+    const deck = new THREE.Mesh(new THREE.BoxGeometry(16, 0.8, 12), new THREE.MeshStandardMaterial({ color: 0x3d4f66 }));
+    deck.position.set(0, 5.6, 20);
+    deck.castShadow = true;
+    deck.receiveShadow = true;
+    bridgeGroup.add(deck);
+
+    // Green Traversable Carpet Indicator
+    const carpet = new THREE.Mesh(
+      new THREE.PlaneGeometry(8, 20),
+      new THREE.MeshBasicMaterial({ color: 0x00ff88, transparent: true, opacity: 0.25, side: THREE.DoubleSide })
+    );
+    carpet.rotation.x = -Math.PI / 2;
+    carpet.position.set(0, 0.1, 20);
+    bridgeGroup.add(carpet);
+    scene.add(bridgeGroup);
+
+    // 4. Church with Tall Pointed Spire (18m height, Tier 3 - Z-Axis test)
+    const churchGroup = new THREE.Group();
+    const churchBase = new THREE.Mesh(new THREE.BoxGeometry(14, 10, 20), new THREE.MeshStandardMaterial({ color: 0x223040 }));
+    churchBase.position.set(35, 5, 45);
+    churchBase.castShadow = true;
+    churchGroup.add(churchBase);
+
+    const spire = new THREE.Mesh(new THREE.ConeGeometry(4, 12, 4), new THREE.MeshStandardMaterial({ color: 0x4a6585 }));
+    spire.position.set(35, 16, 50);
+    spire.rotation.y = Math.PI / 4;
+    spire.castShadow = true;
+    churchGroup.add(spire);
+    scene.add(churchGroup);
+
+    // 5. 4-Story Building (14m height, Tier 3)
+    const bld4Story = new THREE.Mesh(new THREE.BoxGeometry(16, 14, 16), new THREE.MeshStandardMaterial({ color: 0x1f2c3d }));
+    bld4Story.position.set(-35, 7, 45);
+    bld4Story.castShadow = true;
+    bld4Story.receiveShadow = true;
+    scene.add(bld4Story);
+
+    // 6. 1-Story & 2-Story Houses (Tier 2 & 3)
+    const houseMat = new THREE.MeshStandardMaterial({ color: 0x16202c });
+    const h1 = new THREE.Mesh(new THREE.BoxGeometry(12, 4.5, 10), houseMat);
+    h1.position.set(-25, 2.25, -20);
+    h1.castShadow = true; scene.add(h1);
+
+    const h2 = new THREE.Mesh(new THREE.BoxGeometry(14, 7.5, 12), houseMat);
+    h2.position.set(25, 3.75, -20);
+    h2.castShadow = true; scene.add(h2);
+
+    // 7. Stone Occlusion Wall (SM_H_StoneWall_00A for Kalman Coasting Test)
+    const stoneWall = new THREE.Mesh(new THREE.BoxGeometry(1.2, 2.4, 24), new THREE.MeshStandardMaterial({ color: 0x5a6d80 }));
+    stoneWall.position.set(-10, 1.2, 0);
+    stoneWall.castShadow = true;
+    scene.add(stoneWall);
+
+    // -------------------------------------------------------------
+    // CONCENTRIC FOVEATED RINGS (TIER 1..4)
+    // -------------------------------------------------------------
+    const ringGroup = new THREE.Group();
+    function createFoveatedRing(radius, colorHex) {
+      const ringGeo = new THREE.RingGeometry(radius - 0.25, radius + 0.25, 64);
+      const ringMat = new THREE.MeshBasicMaterial({ color: colorHex, side: THREE.DoubleSide, transparent: true, opacity: 0.65 });
+      const ringMesh = new THREE.Mesh(ringGeo, ringMat);
+      ringMesh.rotation.x = -Math.PI / 2;
+      ringMesh.position.y = 0.15;
+      return ringMesh;
+    }
+
+    const ringT1 = createFoveatedRing(10.0, 0xff3344); // Tier 1: Red 10m
+    const ringT2 = createFoveatedRing(30.0, 0xffaa00); // Tier 2: Yellow 30m
+    const ringT3 = createFoveatedRing(60.0, 0x00ff88); // Tier 3: Green 60m
+    const ringT4 = createFoveatedRing(100.0, 0x00f0ff); // Tier 4: Blue 100m
+    ringGroup.add(ringT1, ringT2, ringT3, ringT4);
+    scene.add(ringGroup);
+
+    // -------------------------------------------------------------
+    // MUM-T VEHICLES & DYNAMIC TETHER
+    // -------------------------------------------------------------
+    // 1. Military Drone (UAV) at +30m Altitude
+    const uavGroup = new THREE.Group();
+    // Fuselage
+    const uavBody = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.4, 1.2), new THREE.MeshStandardMaterial({ color: 0x00f0ff, metalness: 0.8, roughness: 0.2 }));
+    uavGroup.add(uavBody);
+    // Wings
+    const wings = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.08, 3.2), new THREE.MeshStandardMaterial({ color: 0x112233 }));
+    uavGroup.add(wings);
+    // Downward LiDAR Searchlight Cone
+    const coneGeo = new THREE.ConeGeometry(8, 25, 32, 1, true);
+    const coneMat = new THREE.MeshBasicMaterial({ color: 0x00f0ff, transparent: true, opacity: 0.12, side: THREE.DoubleSide });
+    const lidarCone = new THREE.Mesh(coneGeo, coneMat);
+    lidarCone.position.y = -12.5;
+    uavGroup.add(lidarCone);
+
+    uavGroup.position.set(0, 30, -30);
+    scene.add(uavGroup);
+
+    // 2. Red Mitsubishi Evo RC Car Rover (UGV)
+    const ugvGroup = new THREE.Group();
+    const carBody = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.6, 2.8), new THREE.MeshStandardMaterial({ color: 0xff2233, metalness: 0.5, roughness: 0.3 }));
+    carBody.position.y = 0.5;
+    carBody.castShadow = true;
+    ugvGroup.add(carBody);
+
+    const carRoof = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.4, 1.4), new THREE.MeshStandardMaterial({ color: 0xffffff }));
+    carRoof.position.set(0, 0.9, -0.2);
+    ugvGroup.add(carRoof);
+
+    // Wheels
+    const wheelGeo = new THREE.CylinderGeometry(0.35, 0.35, 0.3, 16);
+    const wheelMat = new THREE.MeshStandardMaterial({ color: 0x111111 });
+    [[-0.7, 0.35, 0.9], [0.7, 0.35, 0.9], [-0.7, 0.35, -0.9], [0.7, 0.35, -0.9]].forEach(pos => {
+      const w = new THREE.Mesh(wheelGeo, wheelMat);
+      w.rotation.z = Math.PI / 2;
+      w.position.set(...pos);
+      ugvGroup.add(w);
+    });
+
+    // Headlights Spot
+    const carLight = new THREE.SpotLight(0xfffae0, 2.5, 35, Math.PI / 6, 0.5);
+    carLight.position.set(0, 0.6, 1.4);
+    carLight.target.position.set(0, 0.2, 20);
+    ugvGroup.add(carLight);
+    ugvGroup.add(carLight.target);
+
+    ugvGroup.position.set(0, 0, -45);
+    scene.add(ugvGroup);
+
+    // 3. Dynamic Physical Tether Line
+    const tetherMat = new THREE.LineDashedMaterial({ color: 0xffaa00, dashSize: 0.8, gapSize: 0.4, linewidth: 2 });
+    const tetherGeo = new THREE.BufferGeometry().setFromPoints([uavGroup.position, ugvGroup.position]);
+    const tetherLine = new THREE.Line(tetherGeo, tetherMat);
+    tetherLine.computeLineDistances();
+    scene.add(tetherLine);
+
+    // -------------------------------------------------------------
+    // DYNAMIC HOSTILES
+    // -------------------------------------------------------------
+    function createHostile(colorHex) {
+      const g = new THREE.Group();
+      const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.35, 1.1, 8, 16), new THREE.MeshStandardMaterial({ color: colorHex }));
+      body.position.y = 0.9;
+      body.castShadow = true;
+      g.add(body);
+      const beacon = new THREE.PointLight(colorHex, 2.0, 6.0);
+      beacon.position.y = 1.8;
+      g.add(beacon);
+      return g;
+    }
+
+    const hostileA = createHostile(0xff3344); // Open street crossing
+    hostileA.position.set(-18, 0, 0);
+    scene.add(hostileA);
+
+    const hostileB = createHostile(0xff7700); // Behind stone wall
+    hostileB.position.set(-10, 0, -15);
+    scene.add(hostileB);
+
+    // -------------------------------------------------------------
+    // CAMERA PERSPECTIVE MODES
+    // -------------------------------------------------------------
+    let currentMode = 'soldier'; // 'soldier', 'uav', 'ugv', 'orbit'
+    let orbitAngle = 0.0;
+    let isMouseDown = false;
+    let mouseX = 0, mouseY = 0;
+
+    window.addEventListener('mousedown', () => isMouseDown = true);
+    window.addEventListener('mouseup', () => isMouseDown = false);
+    window.addEventListener('mousemove', (e) => {
+      if (isMouseDown && currentMode === 'orbit') {
+        orbitAngle += e.movementX * 0.005;
+      }
+    });
+
+    function setCameraMode(mode) {
+      currentMode = mode;
+      document.querySelectorAll('.btn-pov').forEach(b => b.classList.remove('active'));
+      if (mode === 'soldier') document.getElementById('btnPov1').classList.add('active');
+      if (mode === 'uav') document.getElementById('btnPov2').classList.add('active');
+      if (mode === 'ugv') document.getElementById('btnPov3').classList.add('active');
+      if (mode === 'orbit') document.getElementById('btnPov4').classList.add('active');
+      document.getElementById('compassContainer').style.display = (mode === 'soldier') ? 'flex' : 'none';
+    }
+
+    // Build Compass Tape HTML
+    const tape = document.getElementById('compassTape');
+    const cards = ['N', '030', '060', 'E', '120', '150', 'S', '210', '240', 'W', '300', '330'];
+    tape.innerHTML = [...cards, ...cards, ...cards].map(c => `<span class="${['N','E','S','W'].includes(c)?'cardinal':''}">${c}</span>`).join('');
+
+    // -------------------------------------------------------------
+    // SIMULATION ANIMATION TICK (60 FPS FLUID MOTION)
+    // -------------------------------------------------------------
+    let simTime = 0;
+    const clock = new THREE.Clock();
+
+    function animate() {
+      requestAnimationFrame(animate);
+      const dt = clock.getDelta();
+      simTime += dt;
+
+      // 1. Advance UAV along smooth circular orbit (+30m Alt, R = 32m)
+      const uavSplineRadius = 32.0;
+      const uavSpeed = 0.25;
+      const uX = Math.cos(simTime * uavSpeed) * uavSplineRadius;
+      const uZ = Math.sin(simTime * uavSpeed) * uavSplineRadius;
+      uavGroup.position.set(uX, 30.0, uZ);
+      uavGroup.rotation.y = -(simTime * uavSpeed) + Math.PI / 2;
+
+      // Move Concentric Foveated Rings centered with Drone Shadow
+      ringGroup.position.set(uX, 0, uZ);
+
+      // 2. Advance UGV RC Car along Elliptical Path (A=26m, B=16m) Through Bridge Underpass
+      const ugvA = 26.0;
+      const ugvB = 16.0;
+      const ugvTheta = simTime * uavSpeed - 0.22;
+      const ugvX = Math.cos(ugvTheta) * ugvA;
+      const ugvZ = Math.sin(ugvTheta) * ugvB;
+      ugvGroup.position.set(ugvX, 0, ugvZ);
+      ugvGroup.rotation.y = -Math.atan2(-ugvA * Math.sin(ugvTheta), ugvB * Math.cos(ugvTheta));
+
+      // 3. Update Dynamic Physical Tether (Catenary Sag Envelope 14m-20m)
+      const tetherPts = [uavGroup.position.clone(), ugvGroup.position.clone().add(new THREE.Vector3(0, 0.9, 0))];
+      tetherGeo.setFromPoints(tetherPts);
+      tetherLine.computeLineDistances();
+
+      const tetherDist = uavGroup.position.distanceTo(ugvGroup.position);
+      const tStat = (tetherDist < 14.0) ? 'SLACK' : (tetherDist > 20.0 ? 'HIGH_TENSION' : 'NOMINAL');
+      document.getElementById('dispTether').innerText = `${tetherDist.toFixed(1)}m [${tStat}]`;
+      document.getElementById('dispTether').style.color = (tStat === 'NOMINAL') ? '#00ff88' : '#ffaa00';
+
+      // 4. Update Hostiles Movement
+      // Hostile A: Crosses East Street (X in [16, 32], Z = 2)
+      const hAx = 18.0 + (Math.sin(simTime * 0.45) + 1.0) * 8.0;
+      hostileA.position.set(hAx, 0, 2.0);
+
+      // Hostile B: Patrols behind Primary Stone Wall (Z = -14m, X in [-12, 12])
+      const hBx = Math.sin(simTime * 0.40) * 12.0;
+      hostileB.position.set(hBx, 0, -14.0);
+      // Occluded when behind the stone wall (X in [-8, 8])
+      const isOccluded = Math.abs(hBx) <= 8.0;
+      document.getElementById('tBravo').innerText = isOccluded ? 'COASTING [OCCLUDED]' : 'LOCKED [LINE-OF-SIGHT]';
+      document.getElementById('tBravo').style.color = isOccluded ? '#ffaa00' : '#ff3344';
+
+      // 5. Camera POV Modes
+      if (currentMode === 'soldier') {
+        // Soldier standing at entrance: (0, 1.8, -65) looking down avenue towards underpass
+        camera.position.set(0, 1.8, -65);
+        camera.lookAt(0, 3, 0);
+      } else if (currentMode === 'uav') {
+        // UAV Chase Cam (10m behind, looking down)
+        const fwd = new THREE.Vector3(0, 0, 1).applyAxisAngle(new THREE.Vector3(0, 1, 0), uavGroup.rotation.y);
+        camera.position.copy(uavGroup.position).sub(fwd.clone().multiplyScalar(10)).add(new THREE.Vector3(0, 4, 0));
+        camera.lookAt(uavGroup.position.clone().add(fwd.clone().multiplyScalar(15)));
+      } else if (currentMode === 'ugv') {
+        // UGV Bumper Cam (Mounted on car hood looking forward)
+        const fwd = new THREE.Vector3(0, 0, 1).applyAxisAngle(new THREE.Vector3(0, 1, 0), ugvGroup.rotation.y);
+        camera.position.copy(ugvGroup.position).add(new THREE.Vector3(0, 0.8, 0)).add(fwd.clone().multiplyScalar(1.2));
+        camera.lookAt(camera.position.clone().add(fwd.clone().multiplyScalar(10)));
+      } else if (currentMode === 'orbit') {
+        // Commander Tactical Overview (Elevated isometric / orbit view)
+        camera.position.set(Math.sin(orbitAngle) * 85, 52, Math.cos(orbitAngle) * 85);
+        camera.lookAt(0, 4, 0);
+      }
+
+      // Update Telemetry Panel Numbers
+      document.getElementById('tUavPos').innerText = `X: ${uX.toFixed(1)}m, Y: ${uZ.toFixed(1)}m`;
+      document.getElementById('tUgvPos').innerText = `X: ${ugvX.toFixed(1)}m, Y: ${ugvZ.toFixed(1)}m`;
+
+      // 6. Draw 2D HUD Overlays & Reticles
+      drawHudReticles(tStat);
+
+      // 7. Render 3D Scene
+      renderer.render(scene, camera);
+
+      // 8. Render Top-Down PiP Feed
+      renderPipFeed();
+    }
+
+    // -------------------------------------------------------------
+    // 2D HUD RETICLE BRACKETS (SOLDIER VISOR & COMMANDER C2)
+    // -------------------------------------------------------------
+    function toScreenPos(objPos) {
+      const v = objPos.clone().project(camera);
+      return {
+        x: (v.x * 0.5 + 0.5) * window.innerWidth,
+        y: (-v.y * 0.5 + 0.5) * window.innerHeight,
+        z: v.z
+      };
+    }
+
+    function drawHudReticles(tetherStatus) {
+      hudCanvas.width = window.innerWidth;
+      hudCanvas.height = window.innerHeight;
+      hudCtx.clearRect(0, 0, hudCanvas.width, hudCanvas.height);
+
+      // Only render HUD reticles in Soldier POV or Commander POV
+      if (currentMode !== 'soldier' && currentMode !== 'orbit') return;
+
+      const refPos = (currentMode === 'soldier') ? new THREE.Vector3(0, 1.8, -65) : camera.position;
+
+      // Draw Soldier Tactical Crosshair
+      if (currentMode === 'soldier') {
+        const cx = window.innerWidth / 2;
+        const cy = window.innerHeight / 2;
+        hudCtx.strokeStyle = 'rgba(0, 240, 255, 0.8)';
+        hudCtx.lineWidth = 1.5;
+        hudCtx.beginPath();
+        hudCtx.moveTo(cx - 24, cy); hudCtx.lineTo(cx - 8, cy);
+        hudCtx.moveTo(cx + 8, cy); hudCtx.lineTo(cx + 24, cy);
+        hudCtx.moveTo(cx, cy - 24); hudCtx.lineTo(cx, cy - 8);
+        hudCtx.moveTo(cx, cy + 8); hudCtx.lineTo(cx, cy + 24);
+        hudCtx.stroke();
+      }
+
+      // Draw Commander Tactical Overview Banner
+      if (currentMode === 'orbit') {
+        hudCtx.fillStyle = 'rgba(6, 12, 22, 0.88)';
+        hudCtx.fillRect(20, 68, 380, 52);
+        hudCtx.strokeStyle = '#00f0ff';
+        hudCtx.lineWidth = 1.2;
+        hudCtx.strokeRect(20, 68, 380, 52);
+
+        hudCtx.fillStyle = '#00f0ff';
+        hudCtx.font = 'bold 11px JetBrains Mono';
+        hudCtx.fillText('[COMMANDER C2 OVERVIEW - SQUARE PROVING GROUND]', 32, 88);
+
+        hudCtx.fillStyle = '#00ff88';
+        hudCtx.font = '10px JetBrains Mono';
+        hudCtx.fillText(`DRONE: R=32m ORBIT | RC CAR: UNDERPASS | TETHER: ${tetherStatus}`, 32, 106);
+      }
+
+      // Render Dynamic Reticles for Hostile A & Hostile B
+      const hostilesList = [
+        { obj: hostileA, id: 'ALPHA (ID: 1)', occl: false },
+        { obj: hostileB, id: 'BRAVO (ID: 2)', occl: Math.abs(hostileB.position.x) <= 8.0 }
+      ];
+
+      hostilesList.forEach(h => {
+        const sPos = toScreenPos(h.obj.position.clone().add(new THREE.Vector3(0, 1.2, 0)));
+        if (sPos.z > 0 && sPos.z < 1.0) {
+          const dist = refPos.distanceTo(h.obj.position);
+          const boxSize = Math.max(16, Math.min(60, 280 / Math.max(6, dist)));
+
+          hudCtx.save();
+          hudCtx.translate(sPos.x, sPos.y);
+
+          // Red / Amber MIL-STD-2525 Diamond Bracket
+          hudCtx.strokeStyle = h.occl ? '#ffaa00' : '#ff2233';
+          hudCtx.lineWidth = 2.2;
+          hudCtx.beginPath();
+          hudCtx.moveTo(0, -boxSize);
+          hudCtx.lineTo(boxSize, 0);
+          hudCtx.lineTo(0, boxSize);
+          hudCtx.lineTo(-boxSize, 0);
+          hudCtx.closePath();
+          hudCtx.stroke();
+
+          // Center dot
+          hudCtx.fillStyle = h.occl ? '#ffaa00' : '#ff2233';
+          hudCtx.fillRect(-2, -2, 4, 4);
+
+          // Callout Tag
+          const tagW = 165;
+          const tagH = 28;
+          hudCtx.fillStyle = 'rgba(6, 12, 22, 0.92)';
+          hudCtx.fillRect(-tagW / 2, -boxSize - tagH - 6, tagW, tagH);
+          hudCtx.strokeStyle = h.occl ? '#ffaa00' : '#ff2233';
+          hudCtx.lineWidth = 1;
+          hudCtx.strokeRect(-tagW / 2, -boxSize - tagH - 6, tagW, tagH);
+
+          hudCtx.fillStyle = h.occl ? '#ffaa00' : '#ff3344';
+          hudCtx.font = 'bold 10px JetBrains Mono';
+          hudCtx.fillText(`[TGT] ${h.id} ${h.occl ? '[COASTING]' : '[LOCKED]'}`, -tagW / 2 + 6, -boxSize - 18);
+
+          hudCtx.fillStyle = '#ffffff';
+          hudCtx.font = '9px JetBrains Mono';
+          hudCtx.fillText(`RNG: ${dist.toFixed(1)}m | SPD: 1.8m/s`, -tagW / 2 + 6, -boxSize - 8);
+
+          hudCtx.restore();
+        }
+      });
+    }
+
+    // -------------------------------------------------------------
+    // TOP-DOWN PIP FEED RENDERING
+    // -------------------------------------------------------------
+    function renderPipFeed() {
+      pipCanvas.width = pipCanvas.clientWidth;
+      pipCanvas.height = pipCanvas.clientHeight;
+      pipCtx.fillStyle = '#020408';
+      pipCtx.fillRect(0, 0, pipCanvas.width, pipCanvas.height);
+
+      const pCx = pipCanvas.width / 2;
+      const pCy = pipCanvas.height / 2;
+      const pScale = 2.0;
+
+      // Draw Drone nadir crosshairs
+      pipCtx.strokeStyle = '#00f0ff';
+      pipCtx.lineWidth = 1;
+      pipCtx.beginPath();
+      pipCtx.arc(pCx, pCy, 10, 0, Math.PI * 2);
+      pipCtx.moveTo(pCx - 20, pCy); pipCtx.lineTo(pCx + 20, pCy);
+      pipCtx.moveTo(pCx, pCy - 20); pipCtx.lineTo(pCx, pCy + 20);
+      pipCtx.stroke();
+
+      // Relative Rover Position in PiP
+      const rRelX = (ugvGroup.position.x - uavGroup.position.x) * pScale;
+      const rRelZ = (ugvGroup.position.z - uavGroup.position.z) * pScale;
+      pipCtx.fillStyle = '#ff2233';
+      pipCtx.fillRect(pCx + rRelX - 4, pCy + rRelZ - 6, 8, 12);
+      pipCtx.fillStyle = '#00ff88';
+      pipCtx.font = '8px JetBrains Mono';
+      pipCtx.fillText('UGV', pCx + rRelX + 6, pCy + rRelZ);
+
+      // Relative Hostiles in PiP
+      [hostileA, hostileB].forEach((h, idx) => {
+        const hRelX = (h.position.x - uavGroup.position.x) * pScale;
+        const hRelZ = (h.position.z - uavGroup.position.z) * pScale;
+        pipCtx.fillStyle = '#ff3344';
+        pipCtx.beginPath();
+        pipCtx.arc(pCx + hRelX, pCy + hRelZ, 4, 0, Math.PI * 2);
+        pipCtx.fill();
+        pipCtx.fillText(`T-${idx+1}`, pCx + hRelX + 6, pCy + hRelZ);
+      });
+    }
+
+    // Window Resize Handler
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    // Start Animation Loop
+    animate();
+  </script>
+</body>
+</html>

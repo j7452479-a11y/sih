@@ -520,7 +520,7 @@
       document.getElementById('inspectBadge').innerText = isTemporary ? "HOVERED" : "SELECTED";
       document.getElementById('inspectBadge').style.color = isTemporary ? "var(--accent-green)" : "var(--accent-cyan)";
 
-      // Synchronize designated structure with backend and UE5 Soldier HUD
+      // Synchronize designated structure with backend and Unity Soldier HUD
       if (!isTemporary && ws && ws.readyState === WebSocket.OPEN) {
         if (s) {
           ws.send(JSON.stringify({ type: "DESIGNATE_STRUCTURE", structure: s }));
@@ -599,6 +599,12 @@
       currentScale = 3.6;
     });
 
+    // Fleet Tracking State
+    let liveUavPose = { x: -40.0, y: -40.0, z: 30.0, yaw: 45.0 };
+    let liveUgvPose = { x: 0.0, y: -45.0, z: 0.05, yaw: 90.0 };
+    let liveTetherLength = 18.2;
+    let liveTetherStatus = "NOMINAL";
+
     // WebSocket Telemetry Connection
     const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const wsUrl = `${wsProtocol}//${window.location.host}/ws/c2`;
@@ -610,6 +616,10 @@
         if (msg.type === 'C2_UPDATE') {
           cellsData = msg.cells || [];
           tracksData = msg.tracks || [];
+          if (msg.uav_pose) liveUavPose = msg.uav_pose;
+          if (msg.ugv_pose) liveUgvPose = msg.ugv_pose;
+          if (msg.tether_length_m) liveTetherLength = msg.tether_length_m;
+          if (msg.tether_status) liveTetherStatus = msg.tether_status;
 
           document.getElementById('hudFps').innerText = `${msg.fps} FPS`;
           document.getElementById('hudLatency').innerText = `${msg.latency_ms} MS`;
@@ -838,7 +848,89 @@
         ctx.restore();
       });
 
-      // 5. Draw Tactical Survey Drag Box
+      // 5. Draw Autonomous MUM-T Fleet (UAV Drone, UGV Rover & Dynamic Tether)
+      if (liveUavPose && liveUgvPose) {
+        const uavPx = originX + (liveUavPose.x * currentScale);
+        const uavPy = originY - (liveUavPose.y * currentScale);
+        const ugvPx = originX + (liveUgvPose.x * currentScale);
+        const ugvPy = originY - (liveUgvPose.y * currentScale);
+
+        // Dynamic Physical Tether Cable
+        ctx.strokeStyle = '#ffaa00';
+        ctx.lineWidth = 2.0;
+        ctx.setLineDash([4, 4]);
+        ctx.beginPath();
+        ctx.moveTo(uavPx, uavPy);
+        ctx.lineTo(ugvPx, ugvPy);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        const midX = (uavPx + ugvPx) / 2;
+        const midY = (uavPy + ugvPy) / 2;
+        ctx.fillStyle = '#ffaa00';
+        ctx.font = 'bold 9px JetBrains Mono';
+        ctx.fillText(`TETHER: ${liveTetherLength}m [${liveTetherStatus}]`, midX + 6, midY - 6);
+
+        // UAV Downward LiDAR Scan Cone
+        ctx.fillStyle = 'rgba(0, 240, 255, 0.08)';
+        ctx.strokeStyle = 'rgba(0, 240, 255, 0.4)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(uavPx, uavPy, 22 * currentScale, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        // UAV Delta-Wing Drone Icon
+        ctx.save();
+        ctx.translate(uavPx, uavPy);
+        ctx.rotate(((liveUavPose.yaw || 0) * Math.PI) / 180);
+        ctx.fillStyle = '#00f0ff';
+        ctx.beginPath();
+        ctx.moveTo(0, -12);
+        ctx.lineTo(10, 8);
+        ctx.lineTo(0, 4);
+        ctx.lineTo(-10, 8);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+        ctx.restore();
+
+        ctx.fillStyle = '#00f0ff';
+        ctx.font = 'bold 10px JetBrains Mono';
+        ctx.fillText(`UAV-01 (+${(liveUavPose.z || 30.0).toFixed(1)}m)`, uavPx + 14, uavPy + 4);
+
+        // UGV Rover Icon (Mitsubishi Evo RC Car)
+        ctx.save();
+        ctx.translate(ugvPx, ugvPy);
+        ctx.rotate(((liveUgvPose.yaw || 0) * Math.PI) / 180);
+
+        // Forward LiDAR Scan Fan
+        ctx.fillStyle = 'rgba(0, 255, 136, 0.12)';
+        ctx.strokeStyle = 'rgba(0, 255, 136, 0.5)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.arc(0, 0, 15 * currentScale, -Math.PI / 4 - Math.PI / 2, Math.PI / 4 - Math.PI / 2);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        // Red Car Body
+        ctx.fillStyle = '#ff2233';
+        ctx.fillRect(-6, -10, 12, 20);
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(-6, -10, 12, 20);
+        ctx.restore();
+
+        ctx.fillStyle = '#00ff88';
+        ctx.font = 'bold 10px JetBrains Mono';
+        ctx.fillText(`UGV-ROVER (RC CAR)`, ugvPx + 14, ugvPy + 4);
+      }
+
+      // 6. Draw Tactical Survey Drag Box
       if (isDragging) {
         const x = Math.min(dragStart.x, dragEnd.x);
         const y = Math.min(dragStart.y, dragEnd.y);
