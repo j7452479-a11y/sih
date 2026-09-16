@@ -94,8 +94,25 @@ class SemanticClass(IntEnum):
     OBSTACLE = 2
     BRIDGE = 3
     BUILDING = 4
+    CURB = 5
+    VEHICLE = 6
+    PEDESTRIAN = 8
+    VRU = 8
     HOSTILE = 8
     TARGET = 8
+
+# ==============================================================================
+# 5b. Civilian Autonomous EV & Safety Corridor Parameters
+# ==============================================================================
+EV_HEIGHT_M = 1.6                   # Vehicle roof height
+EV_LIDAR_HEIGHT_M = 1.7             # Roof-mounted sensor position
+EV_SAFE_OVERHEAD_CLEARANCE_M = 2.4  # Minimum clearance required for underpasses/garages
+EV_LANE_WIDTH_M = 3.2               # Standard urban lane width
+EV_CORRIDOR_WIDTH_M = 3.5           # Safety braking corridor lateral envelope
+EV_CORRIDOR_LOOKAHEAD_S = 2.5       # Longitudinal lookahead horizon in seconds
+EV_EMERGENCY_DECEL_MPS2 = 6.5       # Max braking deceleration (m/s^2)
+EV_TTC_THRESHOLD_S = 1.8            # Time-to-Collision (TTC) threshold for AEB trigger
+EV_CRUISE_SPEED_MPS = 10.0          # Target cruising speed (36 km/h)
 
 # ==============================================================================
 # 6. Geodetic Datum & Local Tangent Plane (Normandy Village)

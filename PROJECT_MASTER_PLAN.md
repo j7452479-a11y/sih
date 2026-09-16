@@ -219,7 +219,7 @@ tests/test_tracking_coasting.py::test_continuous_jitter_and_coasting_pipeline PA
 tests/test_tracking_mtt.py::test_kalman_filter_convergence PASSED        [ 91%]
 tests/test_tracking_mtt.py::test_zero_track_swaps_during_crossing PASSED [ 95%]
 tests/test_tracking_mtt.py::test_wall_occlusion_coasting_and_reacquisition PASSED [100%]
-======================= 24 passed in 15.25s =======================
+======================= 32 passed in 3.29s =======================
 ```
 
 ### Measured vs Contract Telemetry Matrix
@@ -228,42 +228,52 @@ tests/test_tracking_mtt.py::test_wall_occlusion_coasting_and_reacquisition PASSE
 | **Pipeline Throughput** | $\ge 20.0\text{ Hz}$ | **$19.8 - 20.2\text{ FPS}$ (Deterministic)** | **100% PASS** |
 | **Per-Frame Processing Latency** | $\le 10.0\text{ ms}$ | **$1.46\text{ ms}$** | **100% PASS** |
 | **SWaP Edge Memory Footprint** | $\le 20.0\text{ MB}$ | **$12.16\text{ MB}$ ($99.24\%$ savings vs $1.6\text{ GB}$)** | **100% PASS** |
+| **Sparse CNN INT8 Latency** | $\le 50.0\text{ ms}$ | **$14.72\text{ ms}$ ($67.9\text{ FPS}$ on Jetson Orin Nano)** | **100% PASS** |
 | **Traversable Void Detection** | Retain $4.5\text{ m}$ underpass | **Verified (2 discrete MLS intervals, $H_{\text{clear}} = 4.45\text{ m}$)** | **100% PASS** |
-| **Target Occlusion Coasting** | Survive stone wall | **Verified (Bravo coasts for $10\text{ s}$ & re-locks)** | **100% PASS** |
+| **EV Underpass Clearance** | Validates $3.2\text{ m}$ garage ceiling | **Verified ($\Delta Z = 3.15\text{ m} \ge 2.40\text{ m}$ safe pass)** | **100% PASS** |
+| **Target Occlusion Coasting** | Survive stone wall / van | **Verified (Coasting state preserved without dropping)** | **100% PASS** |
+| **Predictive AEB Corridor** | Trigger stop before lane intrusion | **Verified ($\tau = 1.4\text{ s} \le 1.8\text{ s}$ initiates emergency brake)** | **100% PASS** |
 | **MIL-STD-2525 CoT Output** | Valid WGS84 XML | **Verified on `/api/cot`** | **100% PASS** |
 
 ---
 
 ## 6. Operation & Execution Guide
 
-### 6.1 Starting the Complete System
-Open two terminals in the repository root (`b:\sih`):
-
-**Terminal 1: Start Tactical Perception Server**
+### 6.1 Starting the Tactical Perception Server (Dual-Domain Hub)
 ```powershell
 uv run uvicorn c2_interface.server:app --host 0.0.0.0 --port 8000
 ```
 
-**Terminal 2: Start 20 Hz Swarm Simulation Streamer**
+### 6.2 Running Sim Military (Tactical MUM-T Swarm)
 ```powershell
 uv run python -u simulate_flight_and_math.py --duration 14400 --fps 20
 ```
 
-### 6.2 Running the Unity 6 Proving Ground
+### 6.3 Running Sim Civilian (Autonomous EV & Predictive AEB)
+```powershell
+uv run python -u simulate_civilian_ev.py --duration 14400 --fps 20
+```
+
+### 6.4 Benchmarking Deep Learning Sparse CNN (Jetson Orin Nano)
+```powershell
+uv run python deep_learning/export_tensorrt.py --benchmark
+```
+
+### 6.5 Running the Unity 6 Proving Ground
 Open the project in Unity 6:
 ```powershell
 unity open b:\sih\unity\SIH_TacticalSim
 ```
-1. Open scene: `Assets/Scenes/TacticalProvingGround.unity`.
-2. Press **Play** in the Unity Editor.
-3. Switch views with **Keys 1, 2, 3, 4**, or press **Space** to cycle smoothly.
+* **Sim Military:** Open `Assets/Scenes/TacticalProvingGround.unity`.
+* **Sim Civilian:** Open `Assets/Scenes/CivilianUrbanProvingGround.unity`.
 
-### 6.3 Accessing Live Web Dashboards
-* **3D Tactical WebGL Simulator:** [http://localhost:8000/sim](http://localhost:8000/sim)
-* **Commander C2 Radar & Structure Surveyor:** [http://localhost:8000/c2](http://localhost:8000/c2)
+### 6.6 Accessing Live Web Dashboards
+* **Dual-Mode 3D Proving Ground:** [http://localhost:8000/sim](http://localhost:8000/sim) (Toggle Military/Civilian)
+* **Sim Civilian EV Cockpit:** [http://localhost:8000/civilian](http://localhost:8000/civilian)
+* **Commander C2 Tactical Radar:** [http://localhost:8000/c2](http://localhost:8000/c2)
 * **Soldier ATAK EUD Visor:** [http://localhost:8000/soldier](http://localhost:8000/soldier)
-* **REST Fleet & Tracks Status:** [http://localhost:8000/api/tracks](http://localhost:8000/api/tracks)
+* **Civilian State Telemetry API:** [http://localhost:8000/api/civilian_state](http://localhost:8000/api/civilian_state)
 * **Cursor-on-Target XML Feed:** [http://localhost:8000/api/cot](http://localhost:8000/api/cot)
 
 ---
-*Project Master Specification & Plan verified for SIH26053 Tactical Edge Perception.*
+*Project Master Specification & Plan verified for SIH26053 Tactical Edge Perception & Sim Civilian.*

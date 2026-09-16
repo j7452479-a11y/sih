@@ -31,7 +31,17 @@ from config import (
     UAV_UDP_PORT,
     UGV_UDP_PORT,
     WEB_SERVER_PORT,
+    EV_HEIGHT_M,
+    EV_LIDAR_HEIGHT_M,
+    EV_SAFE_OVERHEAD_CLEARANCE_M,
+    EV_CORRIDOR_WIDTH_M,
+    EV_CORRIDOR_LOOKAHEAD_S,
+    EV_EMERGENCY_DECEL_MPS2,
+    EV_TTC_THRESHOLD_S,
+    EV_CRUISE_SPEED_MPS,
+    SemanticClass,
 )
+from deep_learning.semantic_inference import SemanticLidarInference
 from core_math.foveated_grid import FoveatedGrid
 from core_math.mls_engine import MLSEngine
 from core_math.registration import compute_relative_se3, transform_points_se3
@@ -70,8 +80,21 @@ last_ugv_pose = {"x": 0.0, "y": -45.0, "z": 0.05, "yaw": 90.0}
 last_tether_length = 18.2
 last_tether_status = "NOMINAL"
 
-# Return Telemetry Socket (UDP Port 5003 -> Unity HUD)
+# Return Telemetry Socket (UDP Port 5003 -> Unity HUD & EV Controller)
 return_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
+# Deep Learning Inference Engine (Sparse CNN)
+dl_inference = SemanticLidarInference(voxel_size_m=0.20)
+
+# Live Civilian EV Perception State
+last_ev_pose = {"x": 0.0, "y": -40.0, "z": EV_LIDAR_HEIGHT_M, "pitch": 0.0, "yaw": 0.0}
+last_ev_speed = EV_CRUISE_SPEED_MPS
+last_ev_aeb_status = "CRUISE_NOMINAL"
+last_ev_ttc_s = 99.9
+last_ev_underpass_clearance_m = 3.2
+last_ev_clearance_safe = True
+last_ev_corridor_length = 25.0
+last_pedestrian_tracks = []
 
 # Connected WebSocket clients
 c2_websockets: Set[WebSocket] = set()
@@ -82,8 +105,21 @@ def on_udp_packet_received(header: SIHHeader, points: np.ndarray):
     global frame_counter, last_fps_time, current_fps, last_latency_ms
 
     t_start = time.perf_counter()
-    pair = jitter_buffer.push(header, points)
 
+    # Direct dispatch for Civilian EV Ego-Vehicle sweeps (sensor_type == 3)
+    if getattr(header, 'sensor_type', 1) == 3:
+        process_civilian_ev_sweep(header, points)
+        last_latency_ms = (time.perf_counter() - t_start) * 1000.0
+        frame_counter += 1
+        now = time.time()
+        if now - last_fps_time >= 1.0:
+            current_fps = frame_counter / (now - last_fps_time)
+            frame_counter = 0
+            last_fps_time = now
+        return
+
+    # Tactical MUM-T Swarm (UAV=1, UGV=2): pair in jitter buffer
+    pair = jitter_buffer.push(header, points)
     if pair is not None:
         process_synchronized_sweep(pair)
         last_latency_ms = (time.perf_counter() - t_start) * 1000.0
@@ -200,6 +236,182 @@ def send_unity_return_telemetry(tracks):
         return_socket.sendto(data, (DEFAULT_RETURN_IP, TELEMETRY_RETURN_PORT))
     except Exception:
         pass
+
+
+def send_civilian_return_telemetry(tracks, aeb_triggered: bool):
+    """Sends JSON target coordinates and AEB status to Port 5003 for EV_AutonomousController.cs."""
+    if len(tracks) > 0:
+        closest = tracks[0]
+        payload = {
+            "track_id": closest.track_id,
+            "pos_world": [closest.position_3d[0] * 100.0, closest.position_3d[1] * 100.0, closest.position_3d[2] * 100.0],
+            "velocity_world": [closest.velocity[0], closest.velocity[1]],
+            "status": "EMERGENCY_STOP" if aeb_triggered else "NOMINAL"
+        }
+    else:
+        payload = {
+            "track_id": 0,
+            "pos_world": [0.0, 0.0, 0.0],
+            "velocity_world": [0.0, 0.0],
+            "status": "NOMINAL"
+        }
+    try:
+        data = json.dumps(payload).encode("utf-8")
+        return_socket.sendto(data, (DEFAULT_RETURN_IP, TELEMETRY_RETURN_PORT))
+    except Exception:
+        pass
+
+
+def process_civilian_ev_sweep(header: SIHHeader, points: np.ndarray):
+    """
+    Executes Sim Civilian Perception Cycle:
+      1. SE(3) ego-motion compensation (pitch under braking, roll on turns)
+      2. 4-Tier Foveated Grid centering at roof sensor (1.7m)
+      3. Capped MLS Overhead clearance validation (Delta Z >= 2.4m for underpasses)
+      4. DBSCAN Clustering & Kalman Tracking of crossing pedestrians (VRU)
+      5. Predictive Dynamic Braking Corridor & AEB calculation (TTC <= 1.8s)
+      6. Telemetry dispatch to Unity EV_AutonomousController on Port 5003
+    """
+    global last_ev_pose, last_ev_speed, last_ev_aeb_status, last_ev_ttc_s
+    global last_ev_underpass_clearance_m, last_ev_clearance_safe
+    global last_ev_corridor_length, last_pedestrian_tracks
+
+    ev_x = float(getattr(header, 'origin_x', 0.0))
+    ev_y = float(getattr(header, 'origin_y', -40.0))
+    ev_z = float(getattr(header, 'origin_z', EV_LIDAR_HEIGHT_M))
+    ev_pitch = float(getattr(header, 'pitch', 0.0))
+    ev_yaw = float(getattr(header, 'yaw', 0.0))
+
+    last_ev_pose = {
+        "x": round(ev_x, 2),
+        "y": round(ev_y, 2),
+        "z": round(ev_z, 2),
+        "pitch": round(ev_pitch, 1),
+        "yaw": round(ev_yaw, 1),
+    }
+
+    if len(points) == 0:
+        return
+
+    # 1. SE(3) Coordinate Transformation: Sensor Local Frame -> Global Navigation Frame
+    pitch_rad = np.radians(ev_pitch)
+    yaw_rad = np.radians(ev_yaw)
+    cos_p, sin_p = np.cos(pitch_rad), np.sin(pitch_rad)
+    cos_y, sin_y = np.cos(yaw_rad), np.sin(yaw_rad)
+
+    R_pitch = np.array([
+        [1.0, 0.0, 0.0],
+        [0.0, cos_p, -sin_p],
+        [0.0, sin_p, cos_p]
+    ], dtype=np.float32)
+
+    R_yaw = np.array([
+        [cos_y, -sin_y, 0.0],
+        [sin_y, cos_y, 0.0],
+        [0.0, 0.0, 1.0]
+    ], dtype=np.float32)
+
+    R_ego = R_yaw @ R_pitch
+
+    local_xyz = points[:, :3]
+    world_xyz = (local_xyz @ R_ego.T) + np.array([ev_x, ev_y, ev_z], dtype=np.float32)
+
+    # Format into (N, 4) tensor [X, Y, Z, SemanticClass]
+    sem_col = points[:, 3:4] if points.shape[1] >= 4 else np.ones((len(points), 1), dtype=np.float32)
+    world_pts_4d = np.hstack([world_xyz, sem_col])
+    world_pts_t = torch.from_numpy(world_pts_4d).float()
+
+    # 2. 4-Tier Foveated Grid Partitioning centered at EV pose
+    valid_mask, tier_ids, ix, iy, valid_pts = grid_engine.partition(world_pts_t)
+
+    # 3. Multi-Level Surface (MLS) Map Interval Updates
+    mls_engine.update_from_partition(tier_ids, ix, iy, valid_pts)
+
+    # 4. Capped MLS Overhead Clearance Validation
+    road_z = 0.0
+    overhead_z = 3.2
+    for key, cell in mls_engine.cells.items():
+        cx, cy, _ = grid_engine.get_cell_center(key)
+        if abs(cx - ev_x) <= 2.0 and 0.0 < (cy - ev_y) <= 30.0:
+            if len(cell.intervals) >= 2:
+                road_z = cell.intervals[0].z_max
+                overhead_z = cell.intervals[1].z_min
+                break
+
+    clearance = overhead_z - road_z
+    last_ev_underpass_clearance_m = clearance
+    last_ev_clearance_safe = clearance >= EV_SAFE_OVERHEAD_CLEARANCE_M
+
+    # 5. Pedestrian Clustering & Kalman Multi-Target Tracking
+    valid_pts_np = valid_pts.cpu().numpy()
+    ped_mask = (valid_pts_np[:, 3] == float(SemanticClass.PEDESTRIAN))
+    if ped_mask.any():
+        ped_pts = valid_pts_np[ped_mask]
+        ped_clusters = dbscan_engine.cluster_points(ped_pts)
+        active_tracks = mtt_engine.update(ped_clusters, provenance=TrackProvenance.LIDAR_CONFIRMED)
+    else:
+        active_tracks = mtt_engine.update([], provenance=TrackProvenance.LIDAR_CONFIRMED)
+
+    # 6. Predictive Dynamic Braking Corridor
+    v_ego = last_ev_speed
+    corridor_len = max(6.0, v_ego * EV_CORRIDOR_LOOKAHEAD_S)
+    last_ev_corridor_length = corridor_len
+    corridor_half_w = EV_CORRIDOR_WIDTH_M / 2.0
+
+    aeb_triggered = False
+    min_ttc = 99.9
+    ped_track_summaries = []
+
+    for t in active_tracks:
+        px, py, pz = t.position_3d
+        vx, vy = t.velocity[0], t.velocity[1]
+        dx = px - ev_x
+        dy = py - ev_y
+
+        in_lateral = abs(dx) <= corridor_half_w
+        in_longitudinal = (dy > 0.5) and (dy <= corridor_len)
+
+        ttc = 99.9
+        time_to_center = abs(dx) / max(abs(vx), 0.1) if abs(vx) > 0.1 else 99.9
+        time_to_ev = dy / max(v_ego, 0.1) if dy > 0 else 99.9
+
+        if in_lateral and in_longitudinal:
+            ttc = min(time_to_ev, time_to_center)
+            if ttc < min_ttc:
+                min_ttc = ttc
+            if ttc <= EV_TTC_THRESHOLD_S or in_longitudinal:
+                aeb_triggered = True
+        elif in_longitudinal and abs(time_to_center - time_to_ev) <= 1.5 and time_to_center <= EV_TTC_THRESHOLD_S:
+            ttc = time_to_center
+            if ttc < min_ttc:
+                min_ttc = ttc
+            aeb_triggered = True
+
+        ped_track_summaries.append({
+            "id": t.track_id,
+            "x": round(float(px), 2),
+            "y": round(float(py), 2),
+            "z": round(float(pz), 2),
+            "vx": round(float(vx), 2),
+            "vy": round(float(vy), 2),
+            "speed": round(float(t.speed), 2),
+            "ttc_s": round(float(ttc), 2),
+            "state": t.state.name
+        })
+
+    last_ev_ttc_s = min_ttc
+    last_pedestrian_tracks = ped_track_summaries
+
+    if aeb_triggered:
+        last_ev_aeb_status = "EMERGENCY_BRAKING_ACTIVE"
+        last_ev_speed = 0.0
+    else:
+        last_ev_aeb_status = "CRUISE_NOMINAL"
+        last_ev_speed = EV_CRUISE_SPEED_MPS
+
+    # 7. Send return telemetry to Port 5003 for EV_AutonomousController.cs
+    send_civilian_return_telemetry(active_tracks, aeb_triggered)
+
 
 async def broadcast_telemetry_loop():
     """Asynchronous 20 Hz WebSocket broadcaster for C2 and Soldier dashboards."""
@@ -352,6 +564,31 @@ def get_tactical_sim_3d():
     if html_file.exists():
         return html_file.read_text(encoding="utf-8")
     return "<h1>Tactical 3D Simulator loading...</h1>"
+
+@app.get("/civilian", response_class=HTMLResponse)
+def get_civilian_dashboard():
+    html_file = STATIC_DIR / "civilian_dashboard.html"
+    if html_file.exists():
+        return html_file.read_text(encoding="utf-8")
+    return "<h1>Civilian EV Dashboard loading...</h1>"
+
+@app.get("/api/civilian_state")
+def get_civilian_state():
+    return {
+        "status": "OPERATIONAL",
+        "ego_pose": last_ev_pose,
+        "speed_mps": round(last_ev_speed, 2),
+        "speed_kmh": round(last_ev_speed * 3.6, 1),
+        "aeb_status": last_ev_aeb_status,
+        "ttc_s": round(last_ev_ttc_s, 2),
+        "overhead_clearance_m": round(last_ev_underpass_clearance_m, 2),
+        "clearance_safe": last_ev_clearance_safe,
+        "corridor_length_m": round(last_ev_corridor_length, 2),
+        "corridor_width_m": EV_CORRIDOR_WIDTH_M,
+        "pedestrian_tracks": last_pedestrian_tracks,
+        "fps": round(current_fps, 1),
+        "latency_ms": round(last_latency_ms, 2)
+    }
 
 @app.get("/api/status")
 def get_status():

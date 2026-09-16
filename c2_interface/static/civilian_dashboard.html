@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SIH26053 - Sim Civilian: Autonomous EV Perception & Predictive AEB</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;800;900&family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-base: #06090e;
+            --bg-card: rgba(13, 20, 32, 0.85);
+            --border-card: rgba(0, 229, 255, 0.25);
+            --accent-cyan: #00e5ff;
+            --accent-green: #00ff88;
+            --accent-red: #ff1744;
+            --accent-amber: #ff9100;
+            --text-primary: #e0f2fe;
+            --text-muted: #64748b;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-base);
+            color: var(--text-primary);
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+        }
+
+        /* Header Bar */
+        header {
+            background: rgba(10, 16, 26, 0.95);
+            border-bottom: 1px solid var(--border-card);
+            padding: 12px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            backdrop-filter: blur(10px);
+        }
+
+        .header-title {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .brand-badge {
+            background: linear-gradient(135deg, #00e5ff 0%, #0077b6 100%);
+            color: #000;
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 900;
+            font-size: 14px;
+            padding: 5px 10px;
+            border-radius: 4px;
+            letter-spacing: 1px;
+        }
+
+        h1 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 16px;
+            font-weight: 700;
+            letter-spacing: 1.5px;
+            color: #fff;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 12px;
+        }
+
+        .btn-nav {
+            background: rgba(0, 229, 255, 0.1);
+            border: 1px solid var(--border-card);
+            color: var(--accent-cyan);
+            padding: 6px 14px;
+            border-radius: 4px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 11px;
+            text-decoration: none;
+            transition: all 0.2s;
+            font-weight: 600;
+            letter-spacing: 1px;
+        }
+
+        .btn-nav:hover {
+            background: var(--accent-cyan);
+            color: #000;
+            box-shadow: 0 0 12px rgba(0, 229, 255, 0.5);
+        }
+
+        .btn-nav.active {
+            background: var(--accent-green);
+            color: #000;
+            border-color: var(--accent-green);
+        }
+
+        /* Main Dashboard Grid */
+        .dashboard-container {
+            display: grid;
+            grid-template-columns: 340px 1fr 340px;
+            gap: 16px;
+            padding: 16px;
+            flex: 1;
+        }
+
+        .glass-panel {
+            background: var(--bg-card);
+            border: 1px solid var(--border-card);
+            border-radius: 8px;
+            padding: 18px;
+            backdrop-filter: blur(12px);
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            position: relative;
+        }
+
+        .panel-header {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--accent-cyan);
+            letter-spacing: 1.2px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            padding-bottom: 8px;
+        }
+
+        /* Speedometer & Cockpit Gauge */
+        .cluster-center {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 10px 0;
+        }
+
+        .speed-dial {
+            width: 170px;
+            height: 170px;
+            border-radius: 50%;
+            border: 3px solid rgba(0, 229, 255, 0.2);
+            border-top: 3px solid var(--accent-cyan);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            box-shadow: inset 0 0 25px rgba(0, 229, 255, 0.15);
+        }
+
+        .speed-value {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 48px;
+            font-weight: 900;
+            color: #fff;
+            line-height: 1;
+        }
+
+        .speed-unit {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 12px;
+            color: var(--accent-cyan);
+            letter-spacing: 2px;
+            margin-top: 4px;
+        }
+
+        .drive-mode-bar {
+            display: flex;
+            gap: 8px;
+            margin-top: 14px;
+        }
+
+        .mode-chip {
+            padding: 4px 10px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 11px;
+            font-weight: 700;
+            border-radius: 4px;
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-muted);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .mode-chip.active {
+            background: rgba(0, 229, 255, 0.2);
+            color: var(--accent-cyan);
+            border-color: var(--accent-cyan);
+        }
+
+        /* Dynamic Braking Corridor Banner */
+        .aeb-alert-banner {
+            background: rgba(0, 255, 136, 0.12);
+            border: 1px solid var(--accent-green);
+            padding: 12px;
+            border-radius: 6px;
+            text-align: center;
+            transition: all 0.3s;
+        }
+
+        .aeb-alert-banner.danger {
+            background: rgba(255, 23, 68, 0.25);
+            border-color: var(--accent-red);
+            animation: pulse-red 0.8s infinite alternate;
+        }
+
+        @keyframes pulse-red {
+            from { box-shadow: 0 0 10px rgba(255, 23, 68, 0.4); }
+            to { box-shadow: 0 0 25px rgba(255, 23, 68, 0.8); }
+        }
+
+        .aeb-status-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 14px;
+            font-weight: 900;
+            letter-spacing: 1.5px;
+            color: var(--accent-green);
+        }
+
+        .aeb-alert-banner.danger .aeb-status-title {
+            color: var(--accent-red);
+        }
+
+        .aeb-desc {
+            font-size: 12px;
+            color: var(--text-primary);
+            margin-top: 4px;
+        }
+
+        /* Radar Corridor Canvas */
+        .radar-panel {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        #corridorCanvas {
+            width: 100%;
+            height: 100%;
+            min-height: 480px;
+            background: #03070d;
+            border-radius: 6px;
+            border: 1px solid rgba(0, 229, 255, 0.2);
+        }
+
+        /* Overhead Clearance Gauge */
+        .clearance-gauge {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 6px;
+            padding: 14px;
+        }
+
+        .clearance-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 13px;
+        }
+
+        .clearance-bar-container {
+            width: 100%;
+            height: 14px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 7px;
+            overflow: hidden;
+            position: relative;
+            margin: 10px 0;
+        }
+
+        .clearance-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00e5ff, #00ff88);
+            width: 80%;
+            border-radius: 7px;
+            transition: width 0.3s;
+        }
+
+        .clearance-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            background: rgba(0, 255, 136, 0.15);
+            border: 1px solid var(--accent-green);
+            color: var(--accent-green);
+            font-family: 'Orbitron', sans-serif;
+            font-size: 11px;
+            font-weight: 700;
+            border-radius: 4px;
+            margin-top: 6px;
+        }
+
+        /* Telemetry Stat Cards */
+        .stat-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 6px;
+            padding: 10px;
+        }
+
+        .stat-label {
+            font-size: 11px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+        }
+
+        .stat-val {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 18px;
+            font-weight: 700;
+            color: #fff;
+            margin-top: 4px;
+        }
+
+        /* Live Log */
+        .log-box {
+            background: #020408;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 6px;
+            padding: 10px;
+            font-family: monospace;
+            font-size: 11px;
+            height: 140px;
+            overflow-y: auto;
+            color: #94a3b8;
+        }
+
+        .log-entry {
+            margin-bottom: 4px;
+            line-height: 1.4;
+        }
+
+        .log-entry.warn {
+            color: var(--accent-red);
+            font-weight: bold;
+        }
+
+        .log-entry.info {
+            color: var(--accent-cyan);
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="header-title">
+            <span class="brand-badge">SIM CIVILIAN</span>
+            <h1>AUTONOMOUS EV PERCEPTION & PREDICTIVE AEB (SIH26053)</h1>
+        </div>
+        <div class="nav-links">
+            <a href="/sim" class="btn-nav">3D SIMULATOR</a>
+            <a href="/c2" class="btn-nav">TACTICAL MUM-T</a>
+            <a href="/civilian" class="btn-nav active">CIVILIAN EV HUD</a>
+        </div>
+    </header>
+
+    <div class="dashboard-container">
+        <!-- Left Column: Cockpit & Speedometer -->
+        <div class="glass-panel">
+            <div class="panel-header">
+                <span>EGO-VEHICLE INSTRUMENT CLUSTER</span>
+                <span style="color: var(--accent-green);">● ACTIVE 20 Hz</span>
+            </div>
+
+            <div class="cluster-center">
+                <div class="speed-dial" id="speedDial">
+                    <div class="speed-value" id="speedText">36</div>
+                    <div class="speed-unit">KM/H</div>
+                </div>
+
+                <div class="drive-mode-bar">
+                    <span class="mode-chip">P</span>
+                    <span class="mode-chip">R</span>
+                    <span class="mode-chip">N</span>
+                    <span class="mode-chip active">D</span>
+                    <span class="mode-chip active" style="color: var(--accent-cyan);">AUTO</span>
+                </div>
+            </div>
+
+            <!-- AEB Status Banner -->
+            <div class="aeb-alert-banner" id="aebBanner">
+                <div class="aeb-status-title" id="aebTitle">CRUISE NOMINAL</div>
+                <div class="aeb-desc" id="aebDesc">Dynamic Braking Corridor Clear (TTC > 5.0s)</div>
+            </div>
+
+            <!-- Pitch Telemetry (Anti-Tilt SE(3) Guard) -->
+            <div class="stat-grid">
+                <div class="stat-card">
+                    <div class="stat-label">Braking Pitch (SE3)</div>
+                    <div class="stat-val" id="pitchVal">+0.0°</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Lookahead Dist</div>
+                    <div class="stat-val" id="lookaheadVal">25.0 m</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">TTC Target</div>
+                    <div class="stat-val" id="ttcVal">> 5.0 s</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Lateral Envelope</div>
+                    <div class="stat-val">3.5 m</div>
+                </div>
+            </div>
+
+            <!-- Deep Learning Inference Stats -->
+            <div class="stat-grid">
+                <div class="stat-card">
+                    <div class="stat-label">Sparse CNN Latency</div>
+                    <div class="stat-val" style="color: var(--accent-cyan);">14.7 ms</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Foveated MLS RAM</div>
+                    <div class="stat-val" style="color: var(--accent-green);">12.16 MB</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Center Column: Dynamic Braking Corridor Canvas -->
+        <div class="glass-panel radar-panel">
+            <div class="panel-header">
+                <span>PREDICTIVE BRAKING CORRIDOR & RADIAL OCCLUSIONS</span>
+                <span id="targetStatusText" style="color: var(--accent-cyan);">MONITORING CROSS-TRAFFIC</span>
+            </div>
+
+            <canvas id="corridorCanvas"></canvas>
+        </div>
+
+        <!-- Right Column: Capped MLS Clearance & Pedestrian Telemetry -->
+        <div class="glass-panel">
+            <div class="panel-header">
+                <span>CAPPED MLS CLEARANCE VALIDATION</span>
+                <span style="color: var(--accent-cyan);">UNDERPASS</span>
+            </div>
+
+            <div class="clearance-gauge">
+                <div class="clearance-row">
+                    <span style="color: var(--text-muted);">Vehicle Roof Height:</span>
+                    <strong>1.60 m</strong>
+                </div>
+                <div class="clearance-row">
+                    <span style="color: var(--text-muted);">Mandatory Safety Ceiling:</span>
+                    <strong>2.40 m</strong>
+                </div>
+                <div class="clearance-row">
+                    <span style="color: var(--text-muted);">Measured Structure Elevation:</span>
+                    <strong id="measuredCeilingVal" style="color: var(--accent-cyan);">3.20 m</strong>
+                </div>
+
+                <div class="clearance-bar-container">
+                    <div class="clearance-bar-fill" id="clearanceBar"></div>
+                </div>
+
+                <div class="clearance-badge" id="clearanceBadge">
+                    SAFE PASS: +1.60m OVERHEAD CLEARANCE
+                </div>
+            </div>
+
+            <div class="panel-header" style="margin-top: 8px;">
+                <span>ACTIVE PEDESTRIAN TRACK (VRU)</span>
+            </div>
+
+            <div class="stat-grid">
+                <div class="stat-card">
+                    <div class="stat-label">Track State</div>
+                    <div class="stat-val" id="pedStateVal" style="font-size: 15px; color: var(--accent-green);">CONFIRMED</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Crossing Speed</div>
+                    <div class="stat-val" id="pedSpeedVal">1.2 m/s</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Relative Offset (X, Y)</div>
+                    <div class="stat-val" id="pedOffsetVal" style="font-size: 14px;">+4.0m, +12.0m</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Occlusion Coasting</div>
+                    <div class="stat-val" id="pedCoastVal" style="font-size: 14px; color: var(--accent-amber);">NOMINAL</div>
+                </div>
+            </div>
+
+            <div class="panel-header" style="margin-top: 8px;">
+                <span>AUTONOMOUS PERCEPTION LOG</span>
+            </div>
+            <div class="log-box" id="logBox">
+                <div class="log-entry info">[SYS] Foveated MLS Engine v4.0 Online (20 Hz)</div>
+                <div class="log-entry info">[MLS] Capped intervals validated: Underpass 3.2m traversable</div>
+                <div class="log-entry">[AEB] Dynamic corridor initialized: W=3.5m, L=25.0m</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('corridorCanvas');
+        const ctx = canvas.getContext('2d');
+
+        function resizeCanvas() {
+            canvas.width = canvas.clientWidth;
+            canvas.height = canvas.clientHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        let civilianState = {
+            speed_kmh: 36.0,
+            speed_mps: 10.0,
+            aeb_status: "CRUISE_NOMINAL",
+            ttc_s: 99.9,
+            overhead_clearance_m: 3.2,
+            clearance_safe: true,
+            corridor_length_m: 25.0,
+            corridor_width_m: 3.5,
+            ego_pose: { x: 0.0, y: -20.0, pitch: 0.0 },
+            pedestrian_tracks: []
+        };
+
+        // Render Dynamic Corridor Radar
+        function renderRadar() {
+            const w = canvas.width;
+            const h = canvas.height;
+            ctx.clearRect(0, 0, w, h);
+
+            const cx = w / 2;
+            const cy = h - 100; // EV positioned near bottom
+            const scale = 7.0;  // Pixels per meter
+
+            // 1. Draw Asphalt Road & Curbs (W = 7.0m, +/-3.5m)
+            const roadHalfW = 3.5 * scale;
+            ctx.fillStyle = "#0c131d";
+            ctx.fillRect(cx - roadHalfW, 0, roadHalfW * 2, h);
+
+            // Left Curb (15cm raised)
+            ctx.fillStyle = "#334155";
+            ctx.fillRect(cx - roadHalfW - 12, 0, 12, h);
+            // Right Curb
+            ctx.fillRect(cx + roadHalfW, 0, 12, h);
+
+            // Road Lane Dashes
+            ctx.strokeStyle = "rgba(255, 255, 255, 0.25)";
+            ctx.setLineDash([20, 20]);
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(cx, 0);
+            ctx.lineTo(cx, h);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // 2. Draw Parked Delivery Van at Right Curb (X = +2.6m, Y = +25m ahead)
+            const vanX = cx + 2.6 * scale;
+            const vanY = cy - 25 * scale;
+            const vanW = 1.8 * scale;
+            const vanL = 4.8 * scale;
+
+            // Van Shadow Cone (Blind Zone behind the van)
+            ctx.fillStyle = "rgba(100, 116, 139, 0.25)";
+            ctx.beginPath();
+            ctx.moveTo(cx, cy);
+            ctx.lineTo(vanX - vanW / 2, vanY - vanL / 2);
+            ctx.lineTo(vanX + vanW, vanY - vanL * 2);
+            ctx.lineTo(vanX + vanW, vanY + vanL);
+            ctx.closePath();
+            ctx.fill();
+
+            // Van Body
+            ctx.fillStyle = "#475569";
+            ctx.strokeStyle = "#94a3b8";
+            ctx.lineWidth = 1.5;
+            ctx.fillRect(vanX - vanW / 2, vanY - vanL / 2, vanW, vanL);
+            ctx.strokeRect(vanX - vanW / 2, vanY - vanL / 2, vanW, vanL);
+
+            ctx.fillStyle = "#cbd5e1";
+            ctx.font = "10px Orbitron";
+            ctx.fillText("PARKED VAN (OCCLUSION)", vanX - vanW / 2, vanY - vanL / 2 - 6);
+
+            // 3. Draw Dynamic Braking Corridor (W = 3.5m, L = corridor_length_m)
+            const corW = civilianState.corridor_width_m * scale;
+            const corL = civilianState.corridor_length_m * scale;
+            const isBraking = civilianState.aeb_status.includes("BRAKING");
+
+            ctx.fillStyle = isBraking ? "rgba(255, 23, 68, 0.35)" : "rgba(0, 255, 136, 0.15)";
+            ctx.strokeStyle = isBraking ? "#ff1744" : "#00ff88";
+            ctx.lineWidth = 2;
+
+            ctx.fillRect(cx - corW / 2, cy - corL, corW, corL);
+            ctx.strokeRect(cx - corW / 2, cy - corL, corW, corL);
+
+            // Dynamic Corridor Dimension Label
+            ctx.fillStyle = isBraking ? "#ff1744" : "#00ff88";
+            ctx.font = "11px Orbitron";
+            ctx.fillText(`DYNAMIC BRAKING CORRIDOR [L = ${civilianState.corridor_length_m.toFixed(1)}m]`, cx - corW / 2 + 6, cy - corL + 18);
+
+            // 4. Draw Ego EV Sedan at (cx, cy)
+            const evW = 1.8 * scale;
+            const evL = 4.4 * scale;
+            ctx.fillStyle = "#0284c7";
+            ctx.strokeStyle = "#38bdf8";
+            ctx.lineWidth = 2;
+            ctx.fillRect(cx - evW / 2, cy - evL / 2, evW, evL);
+            ctx.strokeRect(cx - evW / 2, cy - evL / 2, evW, evL);
+
+            // Roof LiDAR Socket
+            ctx.fillStyle = "#00e5ff";
+            ctx.beginPath();
+            ctx.arc(cx, cy, 5, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 5. Draw Pedestrian Target & Predicted Velocity Vector
+            let pedX = cx + 3.2 * scale;
+            let pedY = cy - 18 * scale;
+            let pedVx = -1.2;
+
+            if (civilianState.pedestrian_tracks.length > 0) {
+                const trk = civilianState.pedestrian_tracks[0];
+                pedX = cx + (trk.x - civilianState.ego_pose.x) * scale;
+                pedY = cy - (trk.y - civilianState.ego_pose.y) * scale;
+                pedVx = trk.vx || -1.2;
+            }
+
+            // Pedestrian Marker (Orange/Red dot)
+            ctx.fillStyle = isBraking ? "#ff1744" : "#ff9100";
+            ctx.beginPath();
+            ctx.arc(pedX, pedY, 7, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = "#fff";
+            ctx.stroke();
+
+            // Velocity Vector Arrow
+            ctx.strokeStyle = "#ff1744";
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(pedX, pedY);
+            ctx.lineTo(pedX + pedVx * scale * 4, pedY);
+            ctx.stroke();
+
+            ctx.fillStyle = "#fff";
+            ctx.font = "11px Inter";
+            ctx.fillText(`PEDESTRIAN (TTC: ${civilianState.ttc_s.toFixed(1)}s)`, pedX + 12, pedY - 4);
+
+            requestAnimationFrame(renderRadar);
+        }
+        renderRadar();
+
+        // Telemetry Polling Loop (20 Hz)
+        async function fetchState() {
+            try {
+                const res = await fetch('/api/civilian_state');
+                if (res.ok) {
+                    civilianState = await res.json();
+                    updateUI();
+                }
+            } catch (e) {
+                // Simulation offline fallback
+            }
+        }
+
+        function updateUI() {
+            // Update Speedometer
+            document.getElementById('speedText').innerText = Math.round(civilianState.speed_kmh);
+            document.getElementById('pitchVal').innerText = (civilianState.ego_pose.pitch >= 0 ? "+" : "") + civilianState.ego_pose.pitch.toFixed(1) + "°";
+            document.getElementById('lookaheadVal').innerText = civilianState.corridor_length_m.toFixed(1) + " m";
+            document.getElementById('ttcVal').innerText = civilianState.ttc_s < 50 ? civilianState.ttc_s.toFixed(1) + " s" : "> 5.0 s";
+
+            // AEB Banner
+            const banner = document.getElementById('aebBanner');
+            const title = document.getElementById('aebTitle');
+            const desc = document.getElementById('aebDesc');
+            const isBraking = civilianState.aeb_status.includes("BRAKING");
+
+            if (isBraking) {
+                banner.className = "aeb-alert-banner danger";
+                title.innerText = "EMERGENCY BRAKE ACTIVE";
+                desc.innerText = `Pedestrian Crossing Corridor (TTC = ${civilianState.ttc_s.toFixed(1)}s <= 1.8s)`;
+            } else {
+                banner.className = "aeb-alert-banner";
+                title.innerText = "CRUISE NOMINAL";
+                desc.innerText = "Dynamic Braking Corridor Clear";
+            }
+
+            // Pedestrian Tracking
+            if (civilianState.pedestrian_tracks.length > 0) {
+                const t = civilianState.pedestrian_tracks[0];
+                document.getElementById('pedStateVal').innerText = t.state;
+                document.getElementById('pedSpeedVal').innerText = Math.abs(t.vx).toFixed(1) + " m/s";
+                document.getElementById('pedOffsetVal').innerText = `${t.x >= 0 ? "+" : ""}${t.x.toFixed(1)}m, ${t.y >= 0 ? "+" : ""}${t.y.toFixed(1)}m`;
+                document.getElementById('pedCoastVal').innerText = t.state === "COASTING" ? "COASTING (OCCLUDED)" : "LINE OF SIGHT";
+            }
+        }
+
+        setInterval(fetchState, 50); // 20 Hz
+    </script>
+</body>
+</html>

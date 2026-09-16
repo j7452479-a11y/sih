@@ -310,6 +310,7 @@
       <div class="badge-live"><div class="dot-live"></div><span id="dispFps">LIVE 20 HZ</span></div>
     </div>
     <div class="telemetry-pills">
+      <button id="btnModeToggle" class="btn-pov" style="padding: 4px 10px; font-size: 11px; background: rgba(0, 229, 255, 0.18); border: 1px solid var(--cyan); color: var(--cyan); border-radius: 4px;" onclick="toggleSimMode()">MODE: MILITARY (MUM-T)</button>
       <div class="pill">SWaP RAM: <span class="pill-val" id="dispRam">12.16 MB (-99.24%)</span></div>
       <div class="pill">LATENCY: <span class="pill-val" id="dispLatency">1.46 ms</span></div>
       <div class="pill">MLS CELLS: <span class="pill-val" id="dispCells">51,357</span></div>
@@ -363,6 +364,7 @@
     <button class="btn-pov" id="btnPov2" onclick="setCameraMode('uav')">2: UAV AERIAL CHASE</button>
     <button class="btn-pov" id="btnPov3" onclick="setCameraMode('ugv')">3: UGV ROVER DASH</button>
     <button class="btn-pov" id="btnPov4" onclick="setCameraMode('orbit')">4: COMMANDER POV</button>
+    <button class="btn-pov" id="btnPov5" onclick="setCameraMode('ev')">5: CIVILIAN EV COCKPIT</button>
   </div>
 
   <!-- HUD 2D OVERLAY (RED DIAMOND RETICLES) -->
@@ -659,6 +661,51 @@
     scene.add(hostileB);
 
     // -------------------------------------------------------------
+    // SIM CIVILIAN: EGO-CENTRIC AUTONOMOUS EV & CORRIDOR
+    // -------------------------------------------------------------
+    let simDomain = 'MILITARY'; // 'MILITARY' or 'CIVILIAN'
+
+    const evGroup = new THREE.Group();
+    // Blue sedan chassis
+    const evBody = new THREE.Mesh(new THREE.BoxGeometry(2.0, 1.1, 4.4), new THREE.MeshStandardMaterial({ color: 0x0284c7, roughness: 0.3, metalness: 0.4 }));
+    evBody.position.y = 0.65;
+    evGroup.add(evBody);
+    // Cabin glass
+    const evCabin = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.7, 2.2), new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.1, metalness: 0.9 }));
+    evCabin.position.set(0, 1.25, -0.2);
+    evGroup.add(evCabin);
+    // Roof LiDAR sensor
+    const evLidar = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.22, 16), new THREE.MeshStandardMaterial({ color: 0x00e5ff, emissive: 0x00e5ff, emissiveIntensity: 0.5 }));
+    evLidar.position.set(0, 1.7, 0.4);
+    evGroup.add(evLidar);
+
+    // Dynamic Braking Corridor (W = 3.5m, L = 25m nominal)
+    const corridorGeo = new THREE.PlaneGeometry(3.5, 25.0);
+    const corridorMat = new THREE.MeshBasicMaterial({ color: 0x00ff88, transparent: true, opacity: 0.35, side: THREE.DoubleSide });
+    const corridorMesh = new THREE.Mesh(corridorGeo, corridorMat);
+    corridorMesh.rotation.x = -Math.PI / 2;
+    corridorMesh.position.set(0, 0.08, 12.5);
+    evGroup.add(corridorMesh);
+    evGroup.position.set(0, 0, -25.0);
+    scene.add(evGroup);
+
+    // Parked Delivery Van at Right Curb (Occlusion)
+    const vanMesh = new THREE.Mesh(new THREE.BoxGeometry(2.0, 2.4, 4.8), new THREE.MeshStandardMaterial({ color: 0x475569 }));
+    vanMesh.position.set(3.2, 1.2, 5.0);
+    vanMesh.castShadow = true;
+    scene.add(vanMesh);
+
+    // Crossing Pedestrian (VRU)
+    const pedGroup = new THREE.Group();
+    const pedTorso = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.24, 1.2, 12), new THREE.MeshStandardMaterial({ color: 0xff9100 }));
+    pedTorso.position.y = 0.7;
+    const pedHead = new THREE.Mesh(new THREE.SphereGeometry(0.2, 12, 12), new THREE.MeshStandardMaterial({ color: 0xffcc80 }));
+    pedHead.position.y = 1.45;
+    pedGroup.add(pedTorso, pedHead);
+    pedGroup.position.set(4.0, 0, 6.0);
+    scene.add(pedGroup);
+
+    // -------------------------------------------------------------
     // CAMERA PERSPECTIVE MODES & CONTROLS
     // -------------------------------------------------------------
     let currentMode = 'soldier'; // 'soldier', 'uav', 'ugv', 'orbit'
@@ -688,18 +735,36 @@
       if (mode === 'uav') document.getElementById('btnPov2').classList.add('active');
       if (mode === 'ugv') document.getElementById('btnPov3').classList.add('active');
       if (mode === 'orbit') document.getElementById('btnPov4').classList.add('active');
+      if (mode === 'ev') document.getElementById('btnPov5').classList.add('active');
       document.getElementById('compassContainer').style.display = (mode === 'soldier') ? 'flex' : 'none';
     }
 
-    // Keyboard Shortcuts (1, 2, 3, 4, Space)
+    function toggleSimMode() {
+      if (simDomain === 'MILITARY') {
+        simDomain = 'CIVILIAN';
+        document.getElementById('btnModeToggle').innerText = 'MODE: CIVILIAN (SMART EV)';
+        document.getElementById('btnModeToggle').style.color = '#00ff88';
+        document.getElementById('btnModeToggle').style.borderColor = '#00ff88';
+        setCameraMode('ev');
+      } else {
+        simDomain = 'MILITARY';
+        document.getElementById('btnModeToggle').innerText = 'MODE: MILITARY (MUM-T)';
+        document.getElementById('btnModeToggle').style.color = 'var(--cyan)';
+        document.getElementById('btnModeToggle').style.borderColor = 'var(--cyan)';
+        setCameraMode('soldier');
+      }
+    }
+
+    // Keyboard Shortcuts (1, 2, 3, 4, 5, Space)
     window.addEventListener('keydown', (e) => {
       if (e.key === '1') setCameraMode('soldier');
       else if (e.key === '2') setCameraMode('uav');
       else if (e.key === '3') setCameraMode('ugv');
       else if (e.key === '4') setCameraMode('orbit');
+      else if (e.key === '5') setCameraMode('ev');
       else if (e.code === 'Space') {
         e.preventDefault();
-        const modes = ['soldier', 'uav', 'ugv', 'orbit'];
+        const modes = ['soldier', 'uav', 'ugv', 'orbit', 'ev'];
         const next = modes[(modes.indexOf(currentMode) + 1) % modes.length];
         setCameraMode(next);
       }
@@ -826,7 +891,25 @@
       document.getElementById('tBravo').innerText = isOccluded ? 'COASTING [OCCLUDED]' : 'LOCKED [LINE-OF-SIGHT]';
       document.getElementById('tBravo').style.color = isOccluded ? '#ffaa00' : '#ff3344';
 
-      // 5. Camera POV Modes
+      // 5. Update Sim Civilian EV & Pedestrian
+      const pedX = 3.8 - ((simTime * 1.6) % 7.6);
+      pedGroup.position.set(pedX, 0, 6.0);
+
+      const evZ = evGroup.position.z;
+      const distToPed = 6.0 - evZ;
+      const inBrakingZone = (distToPed > 0.5 && distToPed < 20.0 && Math.abs(pedX) < 1.75);
+
+      if (inBrakingZone) {
+        corridorMat.color.setHex(0xff1744); // Red AEB emergency stop
+        evGroup.rotation.x = -0.04; // Nose-down pitch under braking
+      } else {
+        corridorMat.color.setHex(0x00ff88); // Green nominal cruise
+        evGroup.rotation.x = 0.0;
+        evGroup.position.z += 0.12;
+        if (evGroup.position.z > 35.0) evGroup.position.z = -35.0;
+      }
+
+      // 6. Camera POV Modes
       if (currentMode === 'soldier') {
         // Soldier standing at South entrance: (0, 1.8, -38) looking North towards underpass
         camera.position.set(0, 1.8, -38);
@@ -853,6 +936,10 @@
         const camR = Math.cos(orbitPitch) * orbitDistance;
         camera.position.set(Math.sin(orbitAngle) * camR, camY, Math.cos(orbitAngle) * camR);
         camera.lookAt(0, 3, 0);
+      } else if (currentMode === 'ev') {
+        // Civilian EV Hood / Chase Cam
+        camera.position.set(evGroup.position.x, 2.2, evGroup.position.z - 6.5);
+        camera.lookAt(evGroup.position.x, 1.5, evGroup.position.z + 20.0);
       }
 
       // Update Telemetry Panel Numbers

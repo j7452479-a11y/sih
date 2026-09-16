@@ -350,6 +350,103 @@ public static class SceneBuilder
         Debug.Log("[SceneBuilder] BUILD COMPLETE. Square Village Proving Ground ready for runtime execution.");
     }
 
+    [MenuItem("SIH/Build Civilian Urban Proving Ground")]
+    public static void BuildCivilianScene()
+    {
+        Debug.Log("[SceneBuilder] Building Complete Civilian Urban Proving Ground for Autonomous EV...");
+
+        SetupLayers();
+        var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+
+        Material matRoad = GetOrCreateMaterial("Mat_Road_Civilian", new Color(0.12f, 0.14f, 0.16f));
+        Material matCurb = GetOrCreateMaterial("Mat_Curb_Civilian", new Color(0.42f, 0.44f, 0.48f));
+        Material matUnderpass = GetOrCreateMaterial("Mat_Underpass_Civilian", new Color(0.35f, 0.38f, 0.42f));
+        Material matVan = GetOrCreateMaterial("Mat_DeliveryVan", new Color(0.25f, 0.30f, 0.38f));
+        Material matEv = GetOrCreateMaterial("Mat_CivilianEV", new Color(0.0f, 0.65f, 0.95f));
+        Material matPed = GetOrCreateMaterial("Mat_Pedestrian", new Color(1.0f, 0.55f, 0.0f));
+
+        int layerRoad = LayerMask.NameToLayer("Road");
+        int layerBuilding = LayerMask.NameToLayer("Building");
+        int layerHostile = LayerMask.NameToLayer("Hostile");
+        int layerObstacle = LayerMask.NameToLayer("Obstacle");
+
+        if (layerRoad == -1) layerRoad = 0;
+        if (layerBuilding == -1) layerBuilding = 0;
+        if (layerHostile == -1) layerHostile = 0;
+        if (layerObstacle == -1) layerObstacle = 0;
+
+        // 1. Two-Lane Asphalt Roadway (100m long, 7.0m wide)
+        CreateBox("Civilian_Roadway", new Vector3(0f, -0.05f, 0f), new Vector3(7.0f, 0.1f, 100.0f), matRoad, layerRoad);
+
+        // 2. 15cm Raised Sidewalk Curbs
+        CreateBox("Curb_Left", new Vector3(-3.8f, 0.075f, 0f), new Vector3(0.6f, 0.15f, 100.0f), matCurb, layerObstacle);
+        CreateBox("Curb_Right", new Vector3(3.8f, 0.075f, 0f), new Vector3(0.6f, 0.15f, 100.0f), matCurb, layerObstacle);
+
+        // 3. Concrete Underpass Structure (3.2m Clearance Ceiling at Z in [15m..30m])
+        CreateBox("Underpass_Pillar_L", new Vector3(-4.2f, 1.8f, 22.5f), new Vector3(0.8f, 3.6f, 15.0f), matUnderpass, layerBuilding);
+        CreateBox("Underpass_Pillar_R", new Vector3(4.2f, 1.8f, 22.5f), new Vector3(0.8f, 3.6f, 15.0f), matUnderpass, layerBuilding);
+        CreateBox("Underpass_Ceiling", new Vector3(0f, 3.4f, 22.5f), new Vector3(9.2f, 0.4f, 15.0f), matUnderpass, layerBuilding);
+
+        // 4. Parked Delivery Van at Curb (Z = +5.0m, casting radial blind occlusion cone)
+        GameObject van = CreateBox("Delivery_Van_Parked", new Vector3(2.8f, 1.2f, 5.0f), new Vector3(1.8f, 2.4f, 4.8f), matVan, layerObstacle);
+
+        // 5. Crossing Pedestrian (Steps out from behind the parked delivery van)
+        GameObject ped = GameObject.CreatePrimitive(PrimitiveType.Capsule);
+        ped.name = "Pedestrian_VRU_01";
+        ped.transform.position = new Vector3(4.0f, 0.9f, 6.2f);
+        ped.transform.localScale = new Vector3(0.5f, 0.9f, 0.5f);
+        ped.GetComponent<Renderer>().sharedMaterial = matPed;
+        ped.layer = layerHostile;
+
+        // 6. Ego Civilian EV Sedan
+        GameObject ev = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        ev.name = "Ego_Civilian_EV";
+        ev.transform.position = new Vector3(0f, 0.6f, -30.0f);
+        ev.transform.localScale = new Vector3(1.9f, 1.2f, 4.4f);
+        ev.GetComponent<Renderer>().sharedMaterial = matEv;
+
+        // Waypoint Destination Marker ahead
+        GameObject target = new GameObject("EV_Waypoint_Target");
+        target.transform.position = new Vector3(0f, 0.5f, 45.0f);
+
+        // Attach EV Autonomous Controller
+        EV_AutonomousController controller = ev.AddComponent<EV_AutonomousController>();
+        controller.pathTarget = target.transform;
+        controller.normalSpeed = 10.0f;
+        controller.corridorWidth = 3.5f;
+        controller.corridorLookaheadTime = 2.5f;
+
+        // Roof-mounted Automotive LiDAR Sensor Socket
+        GameObject lidarSocket = new GameObject("Roof_LiDAR_Socket");
+        lidarSocket.transform.parent = ev.transform;
+        lidarSocket.transform.localPosition = new Vector3(0f, 1.1f, 0.5f); // 0.6 + 1.1 = 1.7m above road
+
+        EV_LidarStreamer streamer = lidarSocket.AddComponent<EV_LidarStreamer>();
+        streamer.targetIp = "127.0.0.1";
+        streamer.targetPort = 5001;
+        streamer.sensorType = 3;
+        streamer.verticalChannels = 32;
+        streamer.horizontalBeams = 64;
+        streamer.vFovMin = -25.0f;
+        streamer.vFovMax = 15.0f;
+
+        // Sunlight
+        GameObject sun = new GameObject("Directional Light");
+        Light sunLight = sun.AddComponent<Light>();
+        sunLight.type = LightType.Directional;
+        sunLight.intensity = 1.2f;
+        sunLight.color = new Color(0.95f, 0.98f, 1.0f);
+        sun.transform.rotation = Quaternion.Euler(45f, -30f, 0f);
+
+        // Save Civilian Scene
+        string scenePath = "Assets/Scenes/CivilianUrbanProvingGround.unity";
+        EditorSceneManager.SaveScene(scene, scenePath);
+
+        AssetDatabase.SaveAssets();
+        AssetDatabase.Refresh();
+        Debug.Log("[SceneBuilder] BUILD COMPLETE. Civilian Urban Proving Ground saved to: " + scenePath);
+    }
+
     private static GameObject CreateBox(string name, Vector3 pos, Vector3 scale, Material mat, int layer)
     {
         GameObject box = GameObject.CreatePrimitive(PrimitiveType.Cube);
