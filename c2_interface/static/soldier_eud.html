@@ -673,8 +673,8 @@
       ctx.stroke();
 
       threats.forEach(t => {
-        // Compute relative azimuth
-        const soldierPos = { x: -21.0, y: -280.0 }; // street entrance
+        // Compute relative azimuth from South entrance of 100m square village
+        const soldierPos = { x: 0.0, y: -38.0 };
         const dx = t.x - soldierPos.x;
         const dy = t.y - soldierPos.y;
         const targetAzimuth = (Math.atan2(dx, dy) * 180 / Math.PI + 360) % 360;

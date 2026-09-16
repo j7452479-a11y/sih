@@ -147,22 +147,27 @@ class SquareVillageFlightSimulator:
                         intensity = np.clip(1.0 - (t_ground / max_range), 0.1, 1.0)
                         points.append([gx + noise[0], gy + noise[1], gz + noise[2], sem, intensity])
 
+        hostile_points = []
         # Inject Hostile Reflections (Semantic Class 8)
         for h_pos, is_occluded in hostiles:
             if not is_occluded:
-                dist = np.linalg.norm(uav_pos - h_pos)
+                h_arr = np.asarray(h_pos, dtype=np.float32)
+                u_arr = np.asarray(uav_pos, dtype=np.float32)
+                dist = float(np.linalg.norm(u_arr - h_arr))
                 if dist < max_range:
-                    for _ in range(8):
-                        noise = np.random.normal(0.0, 0.15, 3)
-                        points.append([
-                            h_pos[0] + noise[0],
-                            h_pos[1] + noise[1],
-                            h_pos[2] + noise[2],
+                    for _ in range(12):
+                        noise = np.random.normal(0.0, 0.12, 3)
+                        hostile_points.append([
+                            h_arr[0] + noise[0],
+                            h_arr[1] + noise[1],
+                            h_arr[2] + noise[2],
                             SemanticClass.HOSTILE.value,
                             0.95
                         ])
 
-        return np.array(points, dtype=np.float32)
+        # Prepend hostiles so they are transmitted in first datagram
+        all_pts = hostile_points + points
+        return np.array(all_pts, dtype=np.float32)
 
     def generate_ugv_lidar_sweep(self, ugv_pos, ugv_yaw, hostiles):
         """Generates 16-channel horizontal ground LiDAR returns (underpass void & street walls)."""
@@ -197,21 +202,25 @@ class SquareVillageFlightSimulator:
                 points.append([px, py, pz, sem, 0.85])
 
         # Inject visible hostiles into UGV sensor sweep
+        hostile_points = []
         for h_pos, is_occluded in hostiles:
             if not is_occluded:
-                dist = np.linalg.norm(ugv_pos - h_pos)
+                h_arr = np.asarray(h_pos, dtype=np.float32)
+                u_arr = np.asarray(ugv_pos, dtype=np.float32)
+                dist = float(np.linalg.norm(u_arr - h_arr))
                 if dist < max_range:
-                    for _ in range(6):
-                        noise = np.random.normal(0.0, 0.12, 3)
-                        points.append([
-                            h_pos[0] + noise[0],
-                            h_pos[1] + noise[1],
-                            h_pos[2] + noise[2],
+                    for _ in range(8):
+                        noise = np.random.normal(0.0, 0.10, 3)
+                        hostile_points.append([
+                            h_arr[0] + noise[0],
+                            h_arr[1] + noise[1],
+                            h_arr[2] + noise[2],
                             SemanticClass.HOSTILE.value,
                             0.95
                         ])
 
-        return np.array(points, dtype=np.float32)
+        all_pts = hostile_points + points
+        return np.array(all_pts, dtype=np.float32)
 
     def step(self, t_seconds):
         """Executes one simulation tick at 20 Hz."""
@@ -235,18 +244,16 @@ class SquareVillageFlightSimulator:
         uav_points = self.generate_uav_lidar_sweep(uav_pos, uav_yaw, hostiles)
         ugv_points = self.generate_ugv_lidar_sweep(ugv_pos, ugv_yaw, hostiles)
 
-        # 5. Pack & Stream to UDP Ports 5001 & 5002
+        # 5. Pack & Stream to UDP Ports 5001 & 5002 (1-to-1 synchronized frame transmission)
         if len(uav_points) > 0:
-            for i in range(0, min(240, len(uav_points)), 80):
-                chunk = uav_points[i:i+80, :4]
-                uav_pkt = pack_sih1_packet(self.frame_id, ts, 1, chunk)
-                self.sock.sendto(uav_pkt, (self.target_ip, UAV_UDP_PORT))
+            chunk_uav = uav_points[:80, :4]
+            uav_pkt = pack_sih1_packet(self.frame_id, ts, 1, chunk_uav)
+            self.sock.sendto(uav_pkt, (self.target_ip, UAV_UDP_PORT))
 
         if len(ugv_points) > 0:
-            for i in range(0, min(160, len(ugv_points)), 80):
-                chunk = ugv_points[i:i+80, :4]
-                ugv_pkt = pack_sih1_packet(self.frame_id, ts + 0.005, 2, chunk)
-                self.sock.sendto(ugv_pkt, (self.target_ip, UGV_UDP_PORT))
+            chunk_ugv = ugv_points[:80, :4]
+            ugv_pkt = pack_sih1_packet(self.frame_id, ts + 0.002, 2, chunk_ugv)
+            self.sock.sendto(ugv_pkt, (self.target_ip, UGV_UDP_PORT))
 
         # 6. Stream JSON Telemetry to Port 5003 for Unity Reticle HUD (Soldier & Commander POVs)
         hud_payload = {

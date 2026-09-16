@@ -118,7 +118,7 @@ Every datagram transmitted from Unity to Python follows an explicit 21-byte bina
 | `1` | `ROAD` | `PM_Road` | Dark Gray | Cobblestone / asphalt traversable street |
 | `2` | `OBSTACLE` | `PM_Obstacle` | Slate / Brick | Village buildings, ruins, walls |
 | `3` | `OVERHANG` | `PM_Bridge` | Orange | Bridge deck, tunnels, building eaves |
-| `8` | `TARGET` | `PM_Target` | Bright Red | Hostile combatant / vehicle (`BP_Tactical_Hostile`) |
+| `8` | `TARGET` | `Mat_Hostile` | Bright Red | Hostile combatant / vehicle (`HostilePatrol` / Layer 8) |
 
 ### 2.3 Temporal Jitter Buffer
 Machine 2 maintains a sliding temporal ring buffer with window $\Delta t_{\max} = 50\text{ ms}$:
@@ -127,31 +127,29 @@ Machine 2 maintains a sliding temporal ring buffer with window $\Delta t_{\max} 
 * Out-of-window or orphaned packets are purged immediately. Spatial alignment is never calculated against stale temporal data.
 
 ### 2.4 The Five-Phase Closed-Loop Tactical & Cinematic Sequence
-To bring the entire mathematical, networking, and robotic architecture together into a seamless, cinematic, and functional tactical loop, the simulation orchestrates the following five phases:
+To bring the entire mathematical, networking, and robotic architecture together into a seamless, cinematic, and functional tactical loop, the simulation orchestrates the following five phases in **Unity 6**:
 
-1. **Phase 1: Environment & Threat Staging (The Stage)**
-   * **Tactical Map:** Photorealistic `L_SIH_U1_NormandyIntegrated` village containing structural overhangs, narrow alleys, and the `SM_H_StoneWall_00A` stone wall asset.
-   * **Dynamic Hostiles (`BP_Tactical_Hostile`):** Character Blueprints using Manny/Quinn or 1.8m bounding cylinders, assigned `PM_Target` collision profile.
-   * **Deterministic Patrol Routes (The Crossing & Occlusion Test):** Two hostiles move on intersecting splines (Hostile A: East-West, Hostile B: North-South) in the village square; one hostile passes behind `SM_H_StoneWall_00A` to rigorously stress-test the Kalman filter and Hungarian association during track crossing and occlusion.
+1. **Phase 1: Environment & Threat Staging (The Proving Ground)**
+   * **Tactical Map:** Native `TacticalProvingGround.unity` 110m × 110m square village containing 46 diverse structures, an open $4.4\text{m}$ vertical underpass bridge, an 18m church spire, and the `Stone_Occlusion_Wall_Primary` ($16\text{m} \times 2.5\text{m} \times 0.8\text{m}$) barrier.
+   * **Dynamic Hostiles (`HostilePatrol.cs`):** Tactical combatants assigned Layer `Hostile` (Semantic ID: 8).
+   * **Deterministic Patrol Routes (The Crossing & Occlusion Test):** Dynamic hostiles patrol the square village; Target Bravo passes directly behind the primary stone wall to rigorously stress-test the Kalman filter coasting and Hungarian data association during line-of-sight occlusion.
 
-2. **Phase 2: Soldier POV & Tablet Setup (The Interface)**
-   * **Soldier Pawn (`BP_Soldier_Pawn`):** First-person camera attached to the head socket; skeletal mesh tablet (ATAK device) attached to the left hand.
-   * **Picture-in-Picture (PiP) Top-Down Feed:** A `SceneCaptureComponent2D` on the UAV belly outputs to a `TextureRenderTarget2D` rendered on the soldier's handheld tablet screen.
-   * **Performance Guardrail:** Strips heavy rendering flags (`bCaptureEveryFrame` optimized, Shadows, Atmosphere, Foliage disabled on capture) to maintain rock-solid $60+\text{ FPS}$.
+2. **Phase 2: Soldier POV & ATAK EUD Setup (The Interface)**
+   * **Soldier Pawn (`Soldier_Ground_Pawn`):** First-person camera mounted on the head socket; views square village and underpass with AR crosshair, compass heading tape, and underpass clearance gauge.
+   * **Dual Tactical Dashboards:** Live Commander C2 Dashboard (`/c2`) and Soldier ATAK Smartphone EUD (`/soldier`) served over WebSockets from the Python perception node.
 
-3. **Phase 3: The Launch & Cinematic Blend (The Transition)**
-   * **Enhanced Input Trigger:** Player presses `Deploy_MUM_T`, triggering an event that transitions `BP_SIH_UAV` state from `LANDED` to `TAKEOFF`.
-   * **Cinematic Camera Blend:** PlayerController executes `SetViewTargetWithBlend` to the UAV external chase camera with a 2.0-second blend time, lifting out of the soldier's eyes up to the drone.
-   * **Coordinated Spline Execution:** UAV flies along its 30m aerial spline at $5\text{ m/s}$. Concurrently, `BP_SIH_UGV` engages on the cobblestone road spline, maintaining a dynamic $20\text{ m}$ trailing tether behind the drone.
+3. **Phase 3: Multi-POV Camera Switching & Kinematics**
+   * **Camera Controller (`MUMT_CameraController.cs`):** Instant hotkey switching between `[1]` Soldier AR Visor POV, `[2]` UAV Aerial Chase POV, `[3]` UGV Rover Dash POV, and `[4]` Commander Tactical Overview (`Space` for fast toggle).
+   * **Coordinated Kinematics:** UAV executes circular orbit ($R = 32\text{m}$, altitude $= +30\text{m}$, $14^\circ/\text{s}$). Concurrently, `UGV_Tethered_Car` navigates the elliptical ground route ($A = 26\text{m}, B = 16\text{m}$) driving through the underpass void beneath the drone's tether line.
 
 4. **Phase 4: Continuous Scanning & Edge Math (The Processing)**
-   * **Continuous 20 Hz LiDAR:** UAV (32-ch nadir) and UGV (16-ch frontal) raycast against environment and hostiles, streaming 16-byte point records inside `SIH1` datagrams over UDP ports 5001 and 5002.
+   * **Continuous 20 Hz LiDAR (`LidarJobStreamer.cs`):** Multi-threaded Unity C# Job System raycasts UAV nadir cone (Port 5001) and UGV horizontal sweep (Port 5002) against environment and hostiles, streaming 16-byte point records in binary `SIH1` datagrams.
    * **Edge Compute Ingestion:** Python node ingests packets, temporal jitter buffer aligns frames ($|t_1 - t_2| \le 25\text{ ms}$), $SE(3)$ register transforms points into common frame.
    * **Foveated MLS & MTT:** Static geometry is flattened into the 4-tier Triebel capped MLS grid ($K=3$) preserving underpass voids. Moving `TARGET (ID: 8)` points are clustered via Tier-DBSCAN, and tracks are filtered with 2D CV Kalman filters and Mahalanobis gating.
 
 5. **Phase 5: Closed-Loop HUD Feedback (The Result)**
    * **WGS84 & CoT Conversion:** Target Cartesian $(x,y)$ coordinates are converted to Geodetic WGS84 Lat/Lon/HAE and serialized to MIL-STD-2525 Cursor-on-Target XML.
-   * **Telemetry Return & HUD Projection:** Target coordinates are streamed over UDP Port 5003 / WebSocket to Unity. Threat Reticle Manager inside Unity renders dynamic red/amber targeting reticles `[ HOSTILE 01 ]` (with range, azimuth, speed) on the soldier's visor and Commander C2 overview.
+   * **Telemetry Return & HUD Projection (`ThreatReticleManager.cs`):** Target coordinates are streamed over UDP Port 5003 to Unity. Threat Reticle Manager projects dynamic MIL-STD-2525 diamond reticles `[ HOSTILE #N ]` (with range, speed, and LOS/Coasting status) in both Soldier AR Visor and Commander Tactical Overview.
 
 ---
 

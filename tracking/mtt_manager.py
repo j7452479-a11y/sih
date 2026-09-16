@@ -177,5 +177,11 @@ class MTTManager:
         # Return all active tracks (both Confirmed and Coasting)
         return [trk for trk in self.tracks.values() if trk.state in (TrackState.CONFIRMED, TrackState.COASTING)]
 
-    def get_confirmed_tracks(self) -> List[TrackedTarget]:
+    def get_active_tracks(self) -> List[TrackedTarget]:
+        """Returns all currently active tracks (both CONFIRMED line-of-sight and COASTING occluded)."""
+        return [trk for trk in self.tracks.values() if trk.state in (TrackState.CONFIRMED, TrackState.COASTING)]
+
+    def get_confirmed_tracks(self, include_coasting: bool = True) -> List[TrackedTarget]:
+        if include_coasting:
+            return self.get_active_tracks()
         return [trk for trk in self.tracks.values() if trk.state == TrackState.CONFIRMED]

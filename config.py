@@ -55,7 +55,7 @@ MAHALANOBIS_GATE_GAMMA = 9.21
 
 # Track confirmation and coasting thresholds
 TRACK_CONFIRMATION_HITS = 3
-TRACK_COAST_MAX_MISSES = 5  # 5 frames @ 20 Hz = 250 ms before purge
+TRACK_COAST_MAX_MISSES = 200  # 200 frames @ 20 Hz = 10.0 s before purge (covers stone wall occlusion)
 
 # Tier-adaptive DBSCAN clustering epsilons
 TIER_DBSCAN_EPSILONS = [0.25, 0.40, 0.80, 1.20]
