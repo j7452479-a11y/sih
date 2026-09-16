@@ -279,7 +279,7 @@
       padding: 14px;
       font-size: 11px;
       z-index: 20;
-      width: 260px;
+      width: 270px;
       display: flex;
       flex-direction: column;
       gap: 8px;
@@ -307,13 +307,13 @@
   <div class="top-bar">
     <div class="brand">
       <span>SIH26053 FOVEATED 3D PROVING GROUND</span>
-      <div class="badge-live"><div class="dot-live"></div>LIVE 20 HZ</div>
+      <div class="badge-live"><div class="dot-live"></div><span id="dispFps">LIVE 20 HZ</span></div>
     </div>
     <div class="telemetry-pills">
-      <div class="pill">SWaP RAM: <span class="pill-val">12.16 MB (-99.24%)</span></div>
-      <div class="pill">LATENCY: <span class="pill-val" id="dispLatency">1.17 ms</span></div>
-      <div class="pill">MLS CELLS: <span class="pill-val" id="dispCells">48,634</span></div>
-      <div class="pill">TETHER: <span class="pill-val" id="dispTether" style="color: var(--amber);">18.2m [NOMINAL]</span></div>
+      <div class="pill">SWaP RAM: <span class="pill-val" id="dispRam">12.16 MB (-99.24%)</span></div>
+      <div class="pill">LATENCY: <span class="pill-val" id="dispLatency">1.46 ms</span></div>
+      <div class="pill">MLS CELLS: <span class="pill-val" id="dispCells">51,357</span></div>
+      <div class="pill">TETHER: <span class="pill-val" id="dispTether" style="color: var(--green);">18.2m [NOMINAL]</span></div>
     </div>
   </div>
 
@@ -329,11 +329,11 @@
   <div class="telemetry-drawer">
     <div class="drawer-title">
       <span>MUM-T KINEMATICS</span>
-      <span style="color: var(--green);">LOCKED</span>
+      <span style="color: var(--green);" id="netBadge">SYNCED</span>
     </div>
-    <div class="row"><span class="row-label">UAV ORBIT:</span><span class="row-val" id="tUavPos">X: -21.0m, Y: 34.0m</span></div>
+    <div class="row"><span class="row-label">UAV ORBIT:</span><span class="row-val" id="tUavPos">X: 0.0m, Y: 32.0m</span></div>
     <div class="row"><span class="row-label">UAV ALTITUDE:</span><span class="row-val" style="color: var(--cyan);">+30.0m AGL (5.0 m/s)</span></div>
-    <div class="row"><span class="row-label">UGV RC CAR:</span><span class="row-val" id="tUgvPos">X: -21.0m, Y: 18.0m</span></div>
+    <div class="row"><span class="row-label">UGV RC CAR:</span><span class="row-val" id="tUgvPos">X: 0.0m, Y: 16.0m</span></div>
     <div class="row"><span class="row-label">UGV SPEED:</span><span class="row-val">3.0 m/s (UNDERPASS PASS)</span></div>
     <div class="row"><span class="row-label">TARGET ALPHA:</span><span class="row-val" style="color: var(--red);" id="tAlpha">LOCKED (72.4m)</span></div>
     <div class="row"><span class="row-label">TARGET BRAVO:</span><span class="row-val" style="color: var(--amber);" id="tBravo">COASTING (WALL)</span></div>
@@ -386,7 +386,8 @@
     scene.fog = new THREE.FogExp2(0x03060a, 0.005);
 
     const camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 1000);
-    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -395,117 +396,138 @@
     // -------------------------------------------------------------
     // LIGHTING
     // -------------------------------------------------------------
-    const ambientLight = new THREE.AmbientLight(0x223344, 1.2);
+    const ambientLight = new THREE.AmbientLight(0x28384d, 1.4);
     scene.add(ambientLight);
 
-    const moonLight = new THREE.DirectionalLight(0x88bbff, 1.5);
-    moonLight.position.set(50, 100, 50);
+    const moonLight = new THREE.DirectionalLight(0xaad4ff, 1.8);
+    moonLight.position.set(50, 110, 50);
     moonLight.castShadow = true;
     moonLight.shadow.mapSize.width = 2048;
     moonLight.shadow.mapSize.height = 2048;
     moonLight.shadow.camera.near = 10;
     moonLight.shadow.camera.far = 300;
-    moonLight.shadow.camera.left = -100;
-    moonLight.shadow.camera.right = 100;
-    moonLight.shadow.camera.top = 100;
-    moonLight.shadow.camera.bottom = -100;
+    moonLight.shadow.camera.left = -90;
+    moonLight.shadow.camera.right = 90;
+    moonLight.shadow.camera.top = 90;
+    moonLight.shadow.camera.bottom = -90;
     scene.add(moonLight);
 
     // -------------------------------------------------------------
-    // TACTICAL PROVING GROUND GEOMETRY (PAGE 54 OF PDF SPEC)
+    // TACTICAL PROVING GROUND GEOMETRY (SQUARE VILLAGE 100m x 100m)
     // -------------------------------------------------------------
-    // 1. Ground Plane (200m x 200m)
-    const groundGeo = new THREE.PlaneGeometry(220, 220);
-    const groundMat = new THREE.MeshStandardMaterial({ color: 0x0c131c, roughness: 0.9, metalness: 0.1 });
+    // 1. Ground Plane (Cobblestone square proving ground)
+    const groundGeo = new THREE.PlaneGeometry(120, 120);
+    const groundMat = new THREE.MeshStandardMaterial({ color: 0x0a1017, roughness: 0.9, metalness: 0.1 });
     const ground = new THREE.Mesh(groundGeo, groundMat);
     ground.rotation.x = -Math.PI / 2;
     ground.receiveShadow = true;
     scene.add(ground);
 
+    // Village Boundary Wall (Square 100m x 100m)
+    const wallMat = new THREE.MeshStandardMaterial({ color: 0x223040, roughness: 0.8 });
+    function createPerimeterWall(w, h, d, x, y, z) {
+      const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), wallMat);
+      m.position.set(x, y, z);
+      m.castShadow = true; m.receiveShadow = true;
+      scene.add(m);
+      return m;
+    }
+    createPerimeterWall(104, 3, 2, 0, 1.5, 52);   // North
+    createPerimeterWall(104, 3, 2, 0, 1.5, -52);  // South
+    createPerimeterWall(2, 3, 104, 52, 1.5, 0);   // East
+    createPerimeterWall(2, 3, 104, -52, 1.5, 0);  // West
+
     // 2. Central Cobblestone Road Network
-    const roadMat = new THREE.MeshStandardMaterial({ color: 0x182430, roughness: 0.8 });
-    // North-South Avenue (passing under the bridge)
-    const roadNS = new THREE.Mesh(new THREE.PlaneGeometry(10, 200), roadMat);
+    const roadMat = new THREE.MeshStandardMaterial({ color: 0x162330, roughness: 0.8 });
+    // North-South Avenue (Passing directly under the bridge)
+    const roadNS = new THREE.Mesh(new THREE.PlaneGeometry(12, 104), roadMat);
     roadNS.rotation.x = -Math.PI / 2;
     roadNS.position.set(0, 0.05, 0);
     roadNS.receiveShadow = true;
     scene.add(roadNS);
 
     // East-West Cross Street
-    const roadEW = new THREE.Mesh(new THREE.PlaneGeometry(200, 10), roadMat);
+    const roadEW = new THREE.Mesh(new THREE.PlaneGeometry(104, 10), roadMat);
     roadEW.rotation.x = -Math.PI / 2;
     roadEW.position.set(0, 0.05, 0);
     roadEW.receiveShadow = true;
     scene.add(roadEW);
 
-    // 3. Central Overpass / Bridge (Open Underpass Void for UGV)
+    // 3. Central Concrete Overpass Bridge (4.5m Open Underpass Clearance Void)
     const bridgeGroup = new THREE.Group();
     const concreteMat = new THREE.MeshStandardMaterial({ color: 0x2c3b4d, roughness: 0.6 });
     // Left & Right Abutment Columns
-    const colLeft = new THREE.Mesh(new THREE.BoxGeometry(2, 6, 12), concreteMat);
-    colLeft.position.set(-6, 3, 20);
-    colLeft.castShadow = true;
-    colLeft.receiveShadow = true;
+    const colLeft = new THREE.Mesh(new THREE.BoxGeometry(2.4, 5.5, 12), concreteMat);
+    colLeft.position.set(-7, 2.75, 0);
+    colLeft.castShadow = true; colLeft.receiveShadow = true;
     bridgeGroup.add(colLeft);
 
-    const colRight = new THREE.Mesh(new THREE.BoxGeometry(2, 6, 12), concreteMat);
-    colRight.position.set(6, 3, 20);
-    colRight.castShadow = true;
-    colRight.receiveShadow = true;
+    const colRight = new THREE.Mesh(new THREE.BoxGeometry(2.4, 5.5, 12), concreteMat);
+    colRight.position.set(7, 2.75, 0);
+    colRight.castShadow = true; colRight.receiveShadow = true;
     bridgeGroup.add(colRight);
 
-    // Elevated Deck (Clearance 5.2m underneath)
-    const deck = new THREE.Mesh(new THREE.BoxGeometry(16, 0.8, 12), new THREE.MeshStandardMaterial({ color: 0x3d4f66 }));
-    deck.position.set(0, 5.6, 20);
-    deck.castShadow = true;
-    deck.receiveShadow = true;
+    // Elevated Bridge Deck (Clearance 4.5m underneath, deck top at 5.5m)
+    const deck = new THREE.Mesh(new THREE.BoxGeometry(18, 0.8, 12), new THREE.MeshStandardMaterial({ color: 0x3d4f66, roughness: 0.5 }));
+    deck.position.set(0, 5.4, 0);
+    deck.castShadow = true; deck.receiveShadow = true;
     bridgeGroup.add(deck);
 
-    // Green Traversable Carpet Indicator
+    // Bridge Guardrails
+    const railMat = new THREE.MeshStandardMaterial({ color: 0x5a6d80 });
+    const railN = new THREE.Mesh(new THREE.BoxGeometry(18, 0.9, 0.3), railMat);
+    railN.position.set(0, 6.2, 5.8);
+    bridgeGroup.add(railN);
+    const railS = new THREE.Mesh(new THREE.BoxGeometry(18, 0.9, 0.3), railMat);
+    railS.position.set(0, 6.2, -5.8);
+    bridgeGroup.add(railS);
+
+    // Green Traversable Carpet Indicator inside the underpass void
     const carpet = new THREE.Mesh(
-      new THREE.PlaneGeometry(8, 20),
-      new THREE.MeshBasicMaterial({ color: 0x00ff88, transparent: true, opacity: 0.25, side: THREE.DoubleSide })
+      new THREE.PlaneGeometry(10, 16),
+      new THREE.MeshBasicMaterial({ color: 0x00ff88, transparent: true, opacity: 0.22, side: THREE.DoubleSide })
     );
     carpet.rotation.x = -Math.PI / 2;
-    carpet.position.set(0, 0.1, 20);
+    carpet.position.set(0, 0.1, 0);
     bridgeGroup.add(carpet);
     scene.add(bridgeGroup);
 
-    // 4. Church with Tall Pointed Spire (18m height, Tier 3 - Z-Axis test)
+    // 4. Church with Tall Pointed Spire (18m height apex)
     const churchGroup = new THREE.Group();
-    const churchBase = new THREE.Mesh(new THREE.BoxGeometry(14, 10, 20), new THREE.MeshStandardMaterial({ color: 0x223040 }));
-    churchBase.position.set(35, 5, 45);
-    churchBase.castShadow = true;
+    const churchBase = new THREE.Mesh(new THREE.BoxGeometry(14, 10, 20), new THREE.MeshStandardMaterial({ color: 0x243242 }));
+    churchBase.position.set(24, 5, 24);
+    churchBase.castShadow = true; churchBase.receiveShadow = true;
     churchGroup.add(churchBase);
 
     const spire = new THREE.Mesh(new THREE.ConeGeometry(4, 12, 4), new THREE.MeshStandardMaterial({ color: 0x4a6585 }));
-    spire.position.set(35, 16, 50);
+    spire.position.set(24, 16, 28);
     spire.rotation.y = Math.PI / 4;
     spire.castShadow = true;
     churchGroup.add(spire);
     scene.add(churchGroup);
 
-    // 5. 4-Story Building (14m height, Tier 3)
+    // 5. 4-Story Building (14m height)
     const bld4Story = new THREE.Mesh(new THREE.BoxGeometry(16, 14, 16), new THREE.MeshStandardMaterial({ color: 0x1f2c3d }));
-    bld4Story.position.set(-35, 7, 45);
-    bld4Story.castShadow = true;
-    bld4Story.receiveShadow = true;
+    bld4Story.position.set(-26, 7, 24);
+    bld4Story.castShadow = true; bld4Story.receiveShadow = true;
     scene.add(bld4Story);
 
-    // 6. 1-Story & 2-Story Houses (Tier 2 & 3)
-    const houseMat = new THREE.MeshStandardMaterial({ color: 0x16202c });
-    const h1 = new THREE.Mesh(new THREE.BoxGeometry(12, 4.5, 10), houseMat);
-    h1.position.set(-25, 2.25, -20);
-    h1.castShadow = true; scene.add(h1);
+    // 6. 1-Story & 2-Story Houses
+    const houseMat = new THREE.MeshStandardMaterial({ color: 0x182432 });
+    const h1 = new THREE.Mesh(new THREE.BoxGeometry(12, 4.5, 12), houseMat);
+    h1.position.set(-24, 2.25, -24);
+    h1.castShadow = true; h1.receiveShadow = true;
+    scene.add(h1);
 
     const h2 = new THREE.Mesh(new THREE.BoxGeometry(14, 7.5, 12), houseMat);
-    h2.position.set(25, 3.75, -20);
-    h2.castShadow = true; scene.add(h2);
+    h2.position.set(24, 3.75, -24);
+    h2.castShadow = true; h2.receiveShadow = true;
+    scene.add(h2);
 
-    // 7. Stone Occlusion Wall (SM_H_StoneWall_00A for Kalman Coasting Test)
-    const stoneWall = new THREE.Mesh(new THREE.BoxGeometry(1.2, 2.4, 24), new THREE.MeshStandardMaterial({ color: 0x5a6d80 }));
-    stoneWall.position.set(-10, 1.2, 0);
-    stoneWall.castShadow = true;
+    // 7. Stone Occlusion Wall (Primary Barrier at Y = -14m for Kalman Coasting Test)
+    const stoneWall = new THREE.Mesh(new THREE.BoxGeometry(16, 2.4, 1.2), new THREE.MeshStandardMaterial({ color: 0x5a6d80 }));
+    stoneWall.position.set(0, 1.2, -14);
+    stoneWall.castShadow = true; stoneWall.receiveShadow = true;
     scene.add(stoneWall);
 
     // -------------------------------------------------------------
@@ -536,17 +558,27 @@
     // Fuselage
     const uavBody = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.4, 1.2), new THREE.MeshStandardMaterial({ color: 0x00f0ff, metalness: 0.8, roughness: 0.2 }));
     uavGroup.add(uavBody);
-    // Wings
-    const wings = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.08, 3.2), new THREE.MeshStandardMaterial({ color: 0x112233 }));
-    uavGroup.add(wings);
+    // Arms & Rotors
+    const arms = new THREE.Mesh(new THREE.BoxGeometry(2.6, 0.08, 2.6), new THREE.MeshStandardMaterial({ color: 0x112233 }));
+    uavGroup.add(arms);
+    const rotors = [];
+    const rotorGeo = new THREE.BoxGeometry(0.8, 0.02, 0.08);
+    const rotorMat = new THREE.MeshBasicMaterial({ color: 0x00ff88 });
+    [[-1.2, 0.22, -1.2], [1.2, 0.22, -1.2], [-1.2, 0.22, 1.2], [1.2, 0.22, 1.2]].forEach(pos => {
+      const r = new THREE.Mesh(rotorGeo, rotorMat);
+      r.position.set(...pos);
+      uavGroup.add(r);
+      rotors.push(r);
+    });
+
     // Downward LiDAR Searchlight Cone
-    const coneGeo = new THREE.ConeGeometry(8, 25, 32, 1, true);
+    const coneGeo = new THREE.ConeGeometry(8, 28, 32, 1, true);
     const coneMat = new THREE.MeshBasicMaterial({ color: 0x00f0ff, transparent: true, opacity: 0.12, side: THREE.DoubleSide });
     const lidarCone = new THREE.Mesh(coneGeo, coneMat);
-    lidarCone.position.y = -12.5;
+    lidarCone.position.y = -14.0;
     uavGroup.add(lidarCone);
 
-    uavGroup.position.set(0, 30, -30);
+    uavGroup.position.set(0, 30, 32);
     scene.add(uavGroup);
 
     // 2. Red Mitsubishi Evo RC Car Rover (UGV)
@@ -561,13 +593,15 @@
     ugvGroup.add(carRoof);
 
     // Wheels
+    const wheels = [];
     const wheelGeo = new THREE.CylinderGeometry(0.35, 0.35, 0.3, 16);
     const wheelMat = new THREE.MeshStandardMaterial({ color: 0x111111 });
-    [[-0.7, 0.35, 0.9], [0.7, 0.35, 0.9], [-0.7, 0.35, -0.9], [0.7, 0.35, -0.9]].forEach(pos => {
+    [[-0.75, 0.35, 0.9], [0.75, 0.35, 0.9], [-0.75, 0.35, -0.9], [0.75, 0.35, -0.9]].forEach(pos => {
       const w = new THREE.Mesh(wheelGeo, wheelMat);
       w.rotation.z = Math.PI / 2;
       w.position.set(...pos);
       ugvGroup.add(w);
+      wheels.push(w);
     });
 
     // Headlights Spot
@@ -577,52 +611,73 @@
     ugvGroup.add(carLight);
     ugvGroup.add(carLight.target);
 
-    ugvGroup.position.set(0, 0, -45);
+    ugvGroup.position.set(0, 0, 16);
     scene.add(ugvGroup);
 
-    // 3. Dynamic Physical Tether Line
-    const tetherMat = new THREE.LineDashedMaterial({ color: 0xffaa00, dashSize: 0.8, gapSize: 0.4, linewidth: 2 });
-    const tetherGeo = new THREE.BufferGeometry().setFromPoints([uavGroup.position, ugvGroup.position]);
+    // 3. Dynamic Physical Catenary Tether Line (16-Segment Sag Cable)
+    const TETHER_NODES = 16;
+    const tetherPts = [];
+    for (let i = 0; i < TETHER_NODES; i++) tetherPts.push(new THREE.Vector3());
+    const tetherGeo = new THREE.BufferGeometry().setFromPoints(tetherPts);
+    const tetherMat = new THREE.LineBasicMaterial({ color: 0xffaa00, linewidth: 2 });
     const tetherLine = new THREE.Line(tetherGeo, tetherMat);
-    tetherLine.computeLineDistances();
     scene.add(tetherLine);
 
     // -------------------------------------------------------------
-    // DYNAMIC HOSTILES
+    // DYNAMIC HOSTILES (CYLINDER + SPHERE HUMANOID MESH)
     // -------------------------------------------------------------
     function createHostile(colorHex) {
       const g = new THREE.Group();
-      const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.35, 1.1, 8, 16), new THREE.MeshStandardMaterial({ color: colorHex }));
-      body.position.y = 0.9;
-      body.castShadow = true;
-      g.add(body);
+      const bodyMat = new THREE.MeshStandardMaterial({ color: colorHex, roughness: 0.4 });
+      
+      // Torso
+      const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.35, 1.1, 16), bodyMat);
+      torso.position.y = 0.85;
+      torso.castShadow = true;
+      g.add(torso);
+
+      // Head
+      const head = new THREE.Mesh(new THREE.SphereGeometry(0.28, 16, 16), bodyMat);
+      head.position.y = 1.6;
+      head.castShadow = true;
+      g.add(head);
+
+      // Light beacon
       const beacon = new THREE.PointLight(colorHex, 2.0, 6.0);
-      beacon.position.y = 1.8;
+      beacon.position.y = 1.9;
       g.add(beacon);
+
       return g;
     }
 
     const hostileA = createHostile(0xff3344); // Open street crossing
-    hostileA.position.set(-18, 0, 0);
+    hostileA.position.set(18, 0, 2);
     scene.add(hostileA);
 
     const hostileB = createHostile(0xff7700); // Behind stone wall
-    hostileB.position.set(-10, 0, -15);
+    hostileB.position.set(-6, 0, -14);
     scene.add(hostileB);
 
     // -------------------------------------------------------------
-    // CAMERA PERSPECTIVE MODES
+    // CAMERA PERSPECTIVE MODES & CONTROLS
     // -------------------------------------------------------------
     let currentMode = 'soldier'; // 'soldier', 'uav', 'ugv', 'orbit'
     let orbitAngle = 0.0;
+    let orbitPitch = 0.55;
+    let orbitDistance = 88.0;
     let isMouseDown = false;
-    let mouseX = 0, mouseY = 0;
 
     window.addEventListener('mousedown', () => isMouseDown = true);
     window.addEventListener('mouseup', () => isMouseDown = false);
     window.addEventListener('mousemove', (e) => {
       if (isMouseDown && currentMode === 'orbit') {
-        orbitAngle += e.movementX * 0.005;
+        orbitAngle += e.movementX * 0.006;
+        orbitPitch = Math.max(0.12, Math.min(1.4, orbitPitch - e.movementY * 0.005));
+      }
+    });
+    window.addEventListener('wheel', (e) => {
+      if (currentMode === 'orbit') {
+        orbitDistance = Math.max(25, Math.min(180, orbitDistance + e.deltaY * 0.05));
       }
     });
 
@@ -636,10 +691,67 @@
       document.getElementById('compassContainer').style.display = (mode === 'soldier') ? 'flex' : 'none';
     }
 
+    // Keyboard Shortcuts (1, 2, 3, 4, Space)
+    window.addEventListener('keydown', (e) => {
+      if (e.key === '1') setCameraMode('soldier');
+      else if (e.key === '2') setCameraMode('uav');
+      else if (e.key === '3') setCameraMode('ugv');
+      else if (e.key === '4') setCameraMode('orbit');
+      else if (e.code === 'Space') {
+        e.preventDefault();
+        const modes = ['soldier', 'uav', 'ugv', 'orbit'];
+        const next = modes[(modes.indexOf(currentMode) + 1) % modes.length];
+        setCameraMode(next);
+      }
+    });
+
     // Build Compass Tape HTML
     const tape = document.getElementById('compassTape');
     const cards = ['N', '030', '060', 'E', '120', '150', 'S', '210', '240', 'W', '300', '330'];
     tape.innerHTML = [...cards, ...cards, ...cards].map(c => `<span class="${['N','E','S','W'].includes(c)?'cardinal':''}">${c}</span>`).join('');
+
+    // -------------------------------------------------------------
+    // LIVE WEBSOCKET TELEMETRY HOOK (20 HZ PERCEPTION ENGINE)
+    // -------------------------------------------------------------
+    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${wsProtocol}//${window.location.host}/ws/c2`;
+    let ws = null;
+    let liveTracks = [];
+
+    function connectWs() {
+      try {
+        ws = new WebSocket(wsUrl);
+        ws.onopen = () => {
+          document.getElementById('netBadge').innerText = 'LIVE 20HZ';
+          document.getElementById('netBadge').style.color = '#00ff88';
+        };
+        ws.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            if (data.type === 'C2_UPDATE') {
+              if (data.fps) document.getElementById('dispFps').innerText = `LIVE ${data.fps} HZ`;
+              if (data.latency_ms) document.getElementById('dispLatency').innerText = `${data.latency_ms.toFixed(2)} ms`;
+              if (data.cell_count) document.getElementById('dispCells').innerText = data.cell_count.toLocaleString();
+              if (data.ram_mb) document.getElementById('dispRam').innerText = `${data.ram_mb} MB (-99.24%)`;
+              if (data.tether_length_m) {
+                document.getElementById('dispTether').innerText = `${data.tether_length_m.toFixed(1)}m [${data.tether_status}]`;
+                document.getElementById('dispTether').style.color = (data.tether_status === 'NOMINAL') ? '#00ff88' : '#ffaa00';
+              }
+              if (data.tracks) {
+                liveTracks = data.tracks;
+              }
+            }
+          } catch(e) {}
+        };
+        ws.onclose = () => {
+          document.getElementById('netBadge').innerText = 'RECONNECTING';
+          document.getElementById('netBadge').style.color = '#ffaa00';
+          setTimeout(connectWs, 1500);
+        };
+        ws.onerror = () => { ws.close(); };
+      } catch(e) {}
+    }
+    connectWs();
 
     // -------------------------------------------------------------
     // SIMULATION ANIMATION TICK (60 FPS FLUID MOTION)
@@ -660,6 +772,9 @@
       uavGroup.position.set(uX, 30.0, uZ);
       uavGroup.rotation.y = -(simTime * uavSpeed) + Math.PI / 2;
 
+      // Spin Drone Propellers
+      rotors.forEach(r => r.rotation.y += dt * 35.0);
+
       // Move Concentric Foveated Rings centered with Drone Shadow
       ringGroup.position.set(uX, 0, uZ);
 
@@ -672,24 +787,40 @@
       ugvGroup.position.set(ugvX, 0, ugvZ);
       ugvGroup.rotation.y = -Math.atan2(-ugvA * Math.sin(ugvTheta), ugvB * Math.cos(ugvTheta));
 
-      // 3. Update Dynamic Physical Tether (Catenary Sag Envelope 14m-20m)
-      const tetherPts = [uavGroup.position.clone(), ugvGroup.position.clone().add(new THREE.Vector3(0, 0.9, 0))];
-      tetherGeo.setFromPoints(tetherPts);
-      tetherLine.computeLineDistances();
+      // Rotate Rover Wheels
+      wheels.forEach(w => w.rotation.x += dt * 8.0);
 
-      const tetherDist = uavGroup.position.distanceTo(ugvGroup.position);
+      // 3. Update Dynamic Catenary Sag Tether (14m - 20m)
+      const p1 = uavGroup.position.clone();
+      const p2 = ugvGroup.position.clone().add(new THREE.Vector3(0, 0.9, 0));
+      const tetherDist = p1.distanceTo(p2);
+      const sagAmp = Math.max(0.6, Math.min(4.8, (22.0 - tetherDist) * 0.8));
+      
+      const posAttr = tetherGeo.attributes.position;
+      for (let i = 0; i < TETHER_NODES; i++) {
+        const s = i / (TETHER_NODES - 1);
+        const x = THREE.MathUtils.lerp(p1.x, p2.x, s);
+        const z = THREE.MathUtils.lerp(p1.z, p2.z, s);
+        const y = THREE.MathUtils.lerp(p1.y, p2.y, s) - Math.sin(s * Math.PI) * sagAmp;
+        posAttr.setXYZ(i, x, y, z);
+      }
+      posAttr.needsUpdate = true;
+
       const tStat = (tetherDist < 14.0) ? 'SLACK' : (tetherDist > 20.0 ? 'HIGH_TENSION' : 'NOMINAL');
-      document.getElementById('dispTether').innerText = `${tetherDist.toFixed(1)}m [${tStat}]`;
-      document.getElementById('dispTether').style.color = (tStat === 'NOMINAL') ? '#00ff88' : '#ffaa00';
+      if (!ws || ws.readyState !== WebSocket.OPEN) {
+        document.getElementById('dispTether').innerText = `${tetherDist.toFixed(1)}m [${tStat}]`;
+        document.getElementById('dispTether').style.color = (tStat === 'NOMINAL') ? '#00ff88' : '#ffaa00';
+      }
 
       // 4. Update Hostiles Movement
-      // Hostile A: Crosses East Street (X in [16, 32], Z = 2)
+      // Hostile A: Crosses East Street (X in [18, 34], Z = 2)
       const hAx = 18.0 + (Math.sin(simTime * 0.45) + 1.0) * 8.0;
       hostileA.position.set(hAx, 0, 2.0);
 
       // Hostile B: Patrols behind Primary Stone Wall (Z = -14m, X in [-12, 12])
       const hBx = Math.sin(simTime * 0.40) * 12.0;
       hostileB.position.set(hBx, 0, -14.0);
+      
       // Occluded when behind the stone wall (X in [-8, 8])
       const isOccluded = Math.abs(hBx) <= 8.0;
       document.getElementById('tBravo').innerText = isOccluded ? 'COASTING [OCCLUDED]' : 'LOCKED [LINE-OF-SIGHT]';
@@ -697,9 +828,15 @@
 
       // 5. Camera POV Modes
       if (currentMode === 'soldier') {
-        // Soldier standing at entrance: (0, 1.8, -65) looking down avenue towards underpass
-        camera.position.set(0, 1.8, -65);
-        camera.lookAt(0, 3, 0);
+        // Soldier standing at South entrance: (0, 1.8, -38) looking North towards underpass
+        camera.position.set(0, 1.8, -38);
+        camera.lookAt(0, 2.5, 0);
+
+        // Update dynamic compass tape
+        const fwd = new THREE.Vector3();
+        camera.getWorldDirection(fwd);
+        const deg = (Math.atan2(fwd.x, fwd.z) * 180 / Math.PI + 360) % 360;
+        tape.style.transform = `translateX(${-deg * 2.2}px)`;
       } else if (currentMode === 'uav') {
         // UAV Chase Cam (10m behind, looking down)
         const fwd = new THREE.Vector3(0, 0, 1).applyAxisAngle(new THREE.Vector3(0, 1, 0), uavGroup.rotation.y);
@@ -711,9 +848,11 @@
         camera.position.copy(ugvGroup.position).add(new THREE.Vector3(0, 0.8, 0)).add(fwd.clone().multiplyScalar(1.2));
         camera.lookAt(camera.position.clone().add(fwd.clone().multiplyScalar(10)));
       } else if (currentMode === 'orbit') {
-        // Commander Tactical Overview (Elevated isometric / orbit view)
-        camera.position.set(Math.sin(orbitAngle) * 85, 52, Math.cos(orbitAngle) * 85);
-        camera.lookAt(0, 4, 0);
+        // Commander Tactical Overview (Interactive orbit view)
+        const camY = Math.sin(orbitPitch) * orbitDistance;
+        const camR = Math.cos(orbitPitch) * orbitDistance;
+        camera.position.set(Math.sin(orbitAngle) * camR, camY, Math.cos(orbitAngle) * camR);
+        camera.lookAt(0, 3, 0);
       }
 
       // Update Telemetry Panel Numbers
@@ -750,37 +889,38 @@
       // Only render HUD reticles in Soldier POV or Commander POV
       if (currentMode !== 'soldier' && currentMode !== 'orbit') return;
 
-      const refPos = (currentMode === 'soldier') ? new THREE.Vector3(0, 1.8, -65) : camera.position;
+      const refPos = (currentMode === 'soldier') ? new THREE.Vector3(0, 1.8, -38) : camera.position;
 
       // Draw Soldier Tactical Crosshair
       if (currentMode === 'soldier') {
         const cx = window.innerWidth / 2;
         const cy = window.innerHeight / 2;
-        hudCtx.strokeStyle = 'rgba(0, 240, 255, 0.8)';
+        hudCtx.strokeStyle = 'rgba(0, 240, 255, 0.85)';
         hudCtx.lineWidth = 1.5;
         hudCtx.beginPath();
-        hudCtx.moveTo(cx - 24, cy); hudCtx.lineTo(cx - 8, cy);
-        hudCtx.moveTo(cx + 8, cy); hudCtx.lineTo(cx + 24, cy);
-        hudCtx.moveTo(cx, cy - 24); hudCtx.lineTo(cx, cy - 8);
-        hudCtx.moveTo(cx, cy + 8); hudCtx.lineTo(cx, cy + 24);
+        hudCtx.arc(cx, cy, 10, 0, Math.PI * 2);
+        hudCtx.moveTo(cx - 26, cy); hudCtx.lineTo(cx - 14, cy);
+        hudCtx.moveTo(cx + 14, cy); hudCtx.lineTo(cx + 26, cy);
+        hudCtx.moveTo(cx, cy - 26); hudCtx.lineTo(cx, cy - 14);
+        hudCtx.moveTo(cx, cy + 14); hudCtx.lineTo(cx, cy + 26);
         hudCtx.stroke();
       }
 
       // Draw Commander Tactical Overview Banner
       if (currentMode === 'orbit') {
-        hudCtx.fillStyle = 'rgba(6, 12, 22, 0.88)';
-        hudCtx.fillRect(20, 68, 380, 52);
+        hudCtx.fillStyle = 'rgba(6, 12, 22, 0.90)';
+        hudCtx.fillRect(20, 68, 410, 52);
         hudCtx.strokeStyle = '#00f0ff';
         hudCtx.lineWidth = 1.2;
-        hudCtx.strokeRect(20, 68, 380, 52);
+        hudCtx.strokeRect(20, 68, 410, 52);
 
         hudCtx.fillStyle = '#00f0ff';
         hudCtx.font = 'bold 11px JetBrains Mono';
-        hudCtx.fillText('[COMMANDER C2 OVERVIEW - SQUARE PROVING GROUND]', 32, 88);
+        hudCtx.fillText('[COMMANDER C2 OVERVIEW - 100M SQUARE PROVING GROUND]', 32, 88);
 
         hudCtx.fillStyle = '#00ff88';
         hudCtx.font = '10px JetBrains Mono';
-        hudCtx.fillText(`DRONE: R=32m ORBIT | RC CAR: UNDERPASS | TETHER: ${tetherStatus}`, 32, 106);
+        hudCtx.fillText(`UAV: R=32m ORBIT | UGV: UNDERPASS | TETHER: ${tetherStatus}`, 32, 106);
       }
 
       // Render Dynamic Reticles for Hostile A & Hostile B
@@ -793,7 +933,7 @@
         const sPos = toScreenPos(h.obj.position.clone().add(new THREE.Vector3(0, 1.2, 0)));
         if (sPos.z > 0 && sPos.z < 1.0) {
           const dist = refPos.distanceTo(h.obj.position);
-          const boxSize = Math.max(16, Math.min(60, 280 / Math.max(6, dist)));
+          const boxSize = Math.max(16, Math.min(55, 280 / Math.max(6, dist)));
 
           hudCtx.save();
           hudCtx.translate(sPos.x, sPos.y);
@@ -885,7 +1025,7 @@
       renderer.setSize(window.innerWidth, window.innerHeight);
     });
 
-    // Start Animation Loop
+    // Start Animation Loop immediately
     animate();
   </script>
 </body>
