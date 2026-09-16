@@ -299,22 +299,147 @@
     }
     .row-label { color: #738a9c; }
     .row-val { font-weight: 700; color: #ffffff; }
+
+    /* RESEARCH MODAL STYLES */
+    .modal-backdrop {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(2, 6, 12, 0.85);
+      backdrop-filter: blur(8px);
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .modal-card {
+      background: #08101a;
+      border: 1px solid var(--cyan);
+      box-shadow: 0 0 35px rgba(0, 240, 255, 0.25);
+      border-radius: 8px;
+      width: 900px;
+      max-width: 95vw;
+      max-height: 85vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .modal-header {
+      padding: 16px 20px;
+      background: rgba(14, 24, 38, 0.95);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .btn-close {
+      background: transparent;
+      border: none;
+      color: #92a9bd;
+      font-size: 24px;
+      cursor: pointer;
+      line-height: 1;
+    }
+    .btn-close:hover { color: var(--red); }
+    .modal-body {
+      padding: 20px;
+      overflow-y: auto;
+      font-size: 13px;
+      line-height: 1.6;
+      color: #cad8e6;
+    }
+    .research-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 16px;
+      margin-top: 12px;
+    }
+    .research-card {
+      background: rgba(14, 24, 38, 0.6);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 14px;
+      border-left: 3px solid var(--cyan);
+    }
+    .card-title {
+      font-size: 12px;
+      font-weight: 800;
+      color: var(--cyan);
+      margin-bottom: 6px;
+    }
+    .card-code {
+      font-family: var(--mono);
+      font-size: 11px;
+      background: rgba(0, 0, 0, 0.5);
+      padding: 2px 6px;
+      border-radius: 3px;
+      color: var(--green);
+    }
   </style>
 </head>
 <body>
 
+  <!-- RESEARCH MODAL: HOW AUTOMOTIVE EV LIDAR WORKS -->
+  <div id="researchModal" class="modal-backdrop" style="display: none;">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <span style="background:var(--cyan); color:#000; padding:3px 8px; border-radius:4px; font-weight:800; font-size:11px;">PHYSICS RESEARCH</span>
+          <span style="font-weight:800; font-size:14px; letter-spacing:1px; color:#fff;">HOW AUTOMOTIVE EV LIDAR WORKS (VS AERIAL UAV)</span>
+        </div>
+        <button class="btn-close" onclick="toggleResearchModal(false)">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div style="font-size:12px; color:#94a3b8; margin-bottom:12px;">
+          An Electric Vehicle operates at ground elevation (0.5m - 2.0m) with strictly forward-facing and perimeter sensors. It has <strong>no access to top-down / aerial views</strong>.
+        </div>
+        <div class="research-grid">
+          <div class="research-card">
+            <div class="card-title">1. EGO-CENTRIC PERSPECTIVE ONLY</div>
+            <p>Unlike UAVs flying at +30m with top-down views, an EV looks horizontally along the road. All points are recorded in the vehicle's body frame (X_right, Y_forward, Z_up). Top-down views are physically non-existent for an EV.</p>
+          </div>
+          <div class="research-card">
+            <div class="card-title">2. GRAZING-ANGLE ROAD ARCS</div>
+            <p>At depression angle &alpha; &lt; 0, ground hit distance is <span class="card-code">d = h / tan(-&alpha;)</span>. At grazing angles (&le;2°), small angle steps jump tens of meters down the road, creating expanding elliptical rings on the asphalt.</p>
+          </div>
+          <div class="research-card">
+            <div class="card-title">3. RADIAL OCCLUSION SHADOW CONES</div>
+            <p>Opaque obstacles (parked delivery van, concrete pillars) block laser rays, casting a dark radial shadow cone on the asphalt. Zero laser returns penetrate behind the obstacle until a pedestrian steps out into line-of-sight.</p>
+          </div>
+          <div class="research-card">
+            <div class="card-title">4. SE(3) SUSPENSION NOSE-DIVE COMP</div>
+            <p>Under hard braking (-7.5 m/s²), front suspension compresses, pitching the vehicle down by -2.5°. 6-DOF IMU applies <span class="card-code">P_corr = R_pitch(-&theta;) * P_raw</span> to prevent treating flat road as an uphill obstacle wall.</p>
+          </div>
+          <div class="research-card">
+            <div class="card-title">5. NATIVE SPHERICAL RANGE-VIEW</div>
+            <p>Rather than slow 3D grids, automotive edge hardware (NVIDIA DRIVE Orin) projects returns to a 2D Range Image Matrix (32 channels &times; 64 beams) mapping pitch vs azimuth. RangeNet++ runs 2D convolutions at 60+ FPS.</p>
+          </div>
+          <div class="research-card">
+            <div class="card-title">6. CAPPED MLS LONGITUDINAL CLEARANCE</div>
+            <p>For highway underpasses and tunnels, Capped Multi-Level Surfaces separate road surface [0.0m, 0.2m] from concrete ceiling [3.2m, 4.0m], proving +1.60m safe headroom without false blockage.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- TOP HEADER -->
   <div class="top-bar">
     <div class="brand">
-      <span>SIH26053 FOVEATED 3D PROVING GROUND</span>
+      <span id="brandTitle">SIH26053 FOVEATED 3D PROVING GROUND</span>
       <div class="badge-live"><div class="dot-live"></div><span id="dispFps">LIVE 20 HZ</span></div>
     </div>
     <div class="telemetry-pills">
       <button id="btnModeToggle" class="btn-pov" style="padding: 4px 10px; font-size: 11px; background: rgba(0, 229, 255, 0.18); border: 1px solid var(--cyan); color: var(--cyan); border-radius: 4px;" onclick="toggleSimMode()">MODE: MILITARY (MUM-T)</button>
-      <div class="pill">SWaP RAM: <span class="pill-val" id="dispRam">12.16 MB (-99.24%)</span></div>
-      <div class="pill">LATENCY: <span class="pill-val" id="dispLatency">1.46 ms</span></div>
-      <div class="pill">MLS CELLS: <span class="pill-val" id="dispCells">51,357</span></div>
-      <div class="pill">TETHER: <span class="pill-val" id="dispTether" style="color: var(--green);">18.2m [NOMINAL]</span></div>
+      <button class="btn-pov" style="padding: 4px 10px; font-size: 11px; background: rgba(0, 255, 136, 0.18); border: 1px solid var(--green); color: var(--green); border-radius: 4px;" onclick="toggleResearchModal(true)">📖 HOW EV LIDAR WORKS</button>
+      <a href="/civilian" class="btn-pov" style="text-decoration: none; padding: 4px 10px; font-size: 11px; background: rgba(0, 240, 255, 0.18); border: 1px solid var(--cyan); color: var(--cyan); border-radius: 4px;">🚗 CIVILIAN COCKPIT</a>
+      <div class="pill" id="pill1">SWaP RAM: <span class="pill-val" id="dispRam">12.16 MB (-99.24%)</span></div>
+      <div class="pill" id="pill2">LATENCY: <span class="pill-val" id="dispLatency">1.46 ms</span></div>
+      <div class="pill" id="pill3">MLS CELLS: <span class="pill-val" id="dispCells">51,357</span></div>
+      <div class="pill" id="pill4">TETHER: <span class="pill-val" id="dispTether" style="color: var(--green);">18.2m [NOMINAL]</span></div>
     </div>
   </div>
 
@@ -327,47 +452,45 @@
   </div>
 
   <!-- LIVE TELEMETRY DRAWER -->
-  <div class="telemetry-drawer">
+  <div class="telemetry-drawer" id="telemetryDrawer">
     <div class="drawer-title">
-      <span>MUM-T KINEMATICS</span>
+      <span id="drawerTitle">MUM-T KINEMATICS</span>
       <span style="color: var(--green);" id="netBadge">SYNCED</span>
     </div>
-    <div class="row"><span class="row-label">UAV ORBIT:</span><span class="row-val" id="tUavPos">X: 0.0m, Y: 32.0m</span></div>
-    <div class="row"><span class="row-label">UAV ALTITUDE:</span><span class="row-val" style="color: var(--cyan);">+30.0m AGL (5.0 m/s)</span></div>
-    <div class="row"><span class="row-label">UGV RC CAR:</span><span class="row-val" id="tUgvPos">X: 0.0m, Y: 16.0m</span></div>
-    <div class="row"><span class="row-label">UGV SPEED:</span><span class="row-val">3.0 m/s (UNDERPASS PASS)</span></div>
-    <div class="row"><span class="row-label">TARGET ALPHA:</span><span class="row-val" style="color: var(--red);" id="tAlpha">LOCKED (72.4m)</span></div>
-    <div class="row"><span class="row-label">TARGET BRAVO:</span><span class="row-val" style="color: var(--amber);" id="tBravo">COASTING (WALL)</span></div>
+    <div class="row"><span class="row-label" id="row1Label">UAV ORBIT:</span><span class="row-val" id="tUavPos">X: 0.0m, Y: 32.0m</span></div>
+    <div class="row"><span class="row-label" id="row2Label">UAV ALTITUDE:</span><span class="row-val" style="color: var(--cyan);" id="tUavAlt">+30.0m AGL (5.0 m/s)</span></div>
+    <div class="row"><span class="row-label" id="row3Label">UGV RC CAR:</span><span class="row-val" id="tUgvPos">X: 0.0m, Y: 16.0m</span></div>
+    <div class="row"><span class="row-label" id="row4Label">UGV SPEED:</span><span class="row-val" id="tUgvSpeed">3.0 m/s (UNDERPASS PASS)</span></div>
+    <div class="row"><span class="row-label" id="row5Label">TARGET ALPHA:</span><span class="row-val" style="color: var(--red);" id="tAlpha">LOCKED (72.4m)</span></div>
+    <div class="row"><span class="row-label" id="row6Label">TARGET BRAVO:</span><span class="row-val" style="color: var(--amber);" id="tBravo">COASTING (WALL)</span></div>
   </div>
 
-  <!-- PIP UAV BELLY CAMERA FEED -->
-  <div class="pip-feed">
-    <div class="pip-header">
-      <span>UAV-01 BELLY GIMBAL [NADIR]</span>
-      <span style="color: var(--green);">+30m</span>
+  <!-- PIP FEED CONTAINER: TOP-DOWN NADIR (MILITARY) OR RANGE-VIEW (CIVILIAN) -->
+  <div class="pip-feed" id="pipContainer">
+    <div class="pip-header" id="pipHeader">
+      <span id="pipTitle">UAV-01 BELLY GIMBAL [NADIR]</span>
+      <span style="color: var(--green);" id="pipSub">+30m</span>
     </div>
     <canvas id="pipCanvas"></canvas>
   </div>
 
   <!-- FOVEATED CONCENTRIC RINGS LEGEND -->
-  <div class="foveated-legend">
-    <div class="legend-title">CONCENTRIC FOVEATED TIERS</div>
-    <div class="legend-item"><div class="legend-ring" style="border-color: #ff3344; background: rgba(255,51,68,0.2);"></div><span>TIER 1: 10m (5cm Res - Bridge/Void)</span></div>
-    <div class="legend-item"><div class="legend-ring" style="border-color: #ffaa00; background: rgba(255,170,0,0.2);"></div><span>TIER 2: 30m (10cm Res - Enemies/Wall)</span></div>
-    <div class="legend-item"><div class="legend-ring" style="border-color: #00ff88; background: rgba(0,255,136,0.2);"></div><span>TIER 3: 60m (20cm Res - Church/Houses)</span></div>
-    <div class="legend-item"><div class="legend-ring" style="border-color: #00f0ff; background: rgba(0,240,255,0.2);"></div><span>TIER 4: 100m (50cm Res - Perimeter)</span></div>
+  <div class="foveated-legend" id="foveatedLegend">
+    <div class="legend-title" id="legendTitle">CONCENTRIC FOVEATED TIERS</div>
+    <div id="legendContent">
+      <div class="legend-item"><div class="legend-ring" style="border-color: #ff3344; background: rgba(255,51,68,0.2);"></div><span>TIER 1: 10m (5cm Res - Bridge/Void)</span></div>
+      <div class="legend-item"><div class="legend-ring" style="border-color: #ffaa00; background: rgba(255,170,0,0.2);"></div><span>TIER 2: 30m (10cm Res - Enemies/Wall)</span></div>
+      <div class="legend-item"><div class="legend-ring" style="border-color: #00ff88; background: rgba(0,255,136,0.2);"></div><span>TIER 3: 60m (20cm Res - Church/Houses)</span></div>
+      <div class="legend-item"><div class="legend-ring" style="border-color: #00f0ff; background: rgba(0,240,255,0.2);"></div><span>TIER 4: 100m (50cm Res - Perimeter)</span></div>
+    </div>
   </div>
 
-  <!-- BOTTOM MULTI-POV DOCK -->
-  <div class="bottom-bar">
-    <button class="btn-pov active" id="btnPov1" onclick="setCameraMode('soldier')">1: SOLDIER VISOR</button>
-    <button class="btn-pov" id="btnPov2" onclick="setCameraMode('uav')">2: UAV AERIAL CHASE</button>
-    <button class="btn-pov" id="btnPov3" onclick="setCameraMode('ugv')">3: UGV ROVER DASH</button>
-    <button class="btn-pov" id="btnPov4" onclick="setCameraMode('orbit')">4: COMMANDER POV</button>
-    <button class="btn-pov" id="btnPov5" onclick="setCameraMode('ev')">5: CIVILIAN EV COCKPIT</button>
+  <!-- BOTTOM MULTI-POV DOCK (DYNAMICALLY POPULATED) -->
+  <div class="bottom-bar" id="bottomDock">
+    <!-- Populated by JS -->
   </div>
 
-  <!-- HUD 2D OVERLAY (RED DIAMOND RETICLES) -->
+  <!-- HUD 2D OVERLAY (TACTICAL / ADAS RETICLES) -->
   <canvas id="hud-overlay"></canvas>
 
   <!-- 3D WEBGL CANVAS CONTAINER -->
@@ -679,6 +802,38 @@
     evLidar.position.set(0, 1.7, 0.4);
     evGroup.add(evLidar);
 
+    // 1,200 Automotive Grazing-Angle LiDAR Laser Return Rings (Expanding Concentric Ellipses)
+    const lidarPointsGeo = new THREE.BufferGeometry();
+    const pointCount = 1200;
+    const positions = new Float32Array(pointCount * 3);
+    const colors = new Float32Array(pointCount * 3);
+    let pIdx = 0;
+    for (let ring = 1; ring <= 24; ring++) {
+      const dist = 1.8 * Math.pow(ring, 1.18);
+      const ptsInRing = Math.min(60, 10 + ring * 2);
+      for (let i = 0; i < ptsInRing && pIdx < pointCount; i++) {
+        const angle = (i / ptsInRing) * Math.PI * 0.9 - Math.PI * 0.45;
+        const px = Math.sin(angle) * dist;
+        const pz = Math.cos(angle) * dist;
+        const py = 0.02;
+
+        positions[pIdx * 3] = px;
+        positions[pIdx * 3 + 1] = py;
+        positions[pIdx * 3 + 2] = pz;
+
+        const rangeRatio = Math.min(1.0, dist / 60.0);
+        colors[pIdx * 3] = rangeRatio * 0.2;
+        colors[pIdx * 3 + 1] = (1.0 - rangeRatio) * 0.9;
+        colors[pIdx * 3 + 2] = 1.0;
+        pIdx++;
+      }
+    }
+    lidarPointsGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    lidarPointsGeo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+    const lidarPointsMat = new THREE.PointsMaterial({ size: 0.18, vertexColors: true, transparent: true, opacity: 0.85 });
+    const lidarPointsMesh = new THREE.Points(lidarPointsGeo, lidarPointsMat);
+    evGroup.add(lidarPointsMesh);
+
     // Dynamic Braking Corridor (W = 3.5m, L = 25m nominal)
     const corridorGeo = new THREE.PlaneGeometry(3.5, 25.0);
     const corridorMat = new THREE.MeshBasicMaterial({ color: 0x00ff88, transparent: true, opacity: 0.35, side: THREE.DoubleSide });
@@ -689,11 +844,30 @@
     evGroup.position.set(0, 0, -25.0);
     scene.add(evGroup);
 
-    // Parked Delivery Van at Right Curb (Occlusion)
+    // Parked Delivery Van at Right Curb (Occlusion at Z = 5.0m, X = 3.2m)
     const vanMesh = new THREE.Mesh(new THREE.BoxGeometry(2.0, 2.4, 4.8), new THREE.MeshStandardMaterial({ color: 0x475569 }));
     vanMesh.position.set(3.2, 1.2, 5.0);
     vanMesh.castShadow = true;
     scene.add(vanMesh);
+
+    // 3D Bounding Box Helper around Van
+    const vanBox = new THREE.BoxHelper(vanMesh, 0x00ff88);
+    scene.add(vanBox);
+
+    // Radial Occlusion Shadow Cone behind Van (Zero laser returns penetrate)
+    const shadowConeGeo = new THREE.BufferGeometry();
+    const shadowVerts = new Float32Array([
+      2.2, 0.02, 7.4,
+      4.2, 0.02, 7.4,
+      7.0, 0.02, 40.0,
+      2.2, 0.02, 7.4,
+      7.0, 0.02, 40.0,
+      2.6, 0.02, 40.0
+    ]);
+    shadowConeGeo.setAttribute('position', new THREE.BufferAttribute(shadowVerts, 3));
+    const shadowConeMat = new THREE.MeshBasicMaterial({ color: 0x030712, transparent: true, opacity: 0.9, side: THREE.DoubleSide });
+    const shadowConeMesh = new THREE.Mesh(shadowConeGeo, shadowConeMat);
+    scene.add(shadowConeMesh);
 
     // Crossing Pedestrian (VRU)
     const pedGroup = new THREE.Group();
@@ -702,13 +876,28 @@
     const pedHead = new THREE.Mesh(new THREE.SphereGeometry(0.2, 12, 12), new THREE.MeshStandardMaterial({ color: 0xffcc80 }));
     pedHead.position.y = 1.45;
     pedGroup.add(pedTorso, pedHead);
+
+    // 3D Bounding Box Helper around Pedestrian
+    const pedBoxGeo = new THREE.BoxGeometry(0.6, 1.8, 0.6);
+    const pedBoxMat = new THREE.MeshBasicMaterial({ color: 0xff1744, wireframe: true });
+    const pedBoxMesh = new THREE.Mesh(pedBoxGeo, pedBoxMat);
+    pedBoxMesh.position.y = 0.9;
+    pedGroup.add(pedBoxMesh);
+
     pedGroup.position.set(4.0, 0, 6.0);
     scene.add(pedGroup);
 
     // -------------------------------------------------------------
+    // RESEARCH MODAL TOGGLE
+    // -------------------------------------------------------------
+    function toggleResearchModal(show) {
+      document.getElementById('researchModal').style.display = show ? 'flex' : 'none';
+    }
+
+    // -------------------------------------------------------------
     // CAMERA PERSPECTIVE MODES & CONTROLS
     // -------------------------------------------------------------
-    let currentMode = 'soldier'; // 'soldier', 'uav', 'ugv', 'orbit'
+    let currentMode = 'soldier'; // Military: 'soldier', 'uav', 'ugv', 'orbit'. Civilian: 'ev-windshield', 'ev-roof', 'ev-bumper', 'ev-corridor', 'ev-ped'
     let orbitAngle = 0.0;
     let orbitPitch = 0.55;
     let orbitDistance = 88.0;
@@ -717,26 +906,44 @@
     window.addEventListener('mousedown', () => isMouseDown = true);
     window.addEventListener('mouseup', () => isMouseDown = false);
     window.addEventListener('mousemove', (e) => {
-      if (isMouseDown && currentMode === 'orbit') {
+      // Orbit camera is ONLY allowed in Military mode! Disabled in Civilian EV mode.
+      if (isMouseDown && simDomain === 'MILITARY' && currentMode === 'orbit') {
         orbitAngle += e.movementX * 0.006;
         orbitPitch = Math.max(0.12, Math.min(1.4, orbitPitch - e.movementY * 0.005));
       }
     });
     window.addEventListener('wheel', (e) => {
-      if (currentMode === 'orbit') {
+      if (simDomain === 'MILITARY' && currentMode === 'orbit') {
         orbitDistance = Math.max(25, Math.min(180, orbitDistance + e.deltaY * 0.05));
       }
     });
 
+    // Render Bottom POV Dock
+    function renderBottomDock() {
+      const dock = document.getElementById('bottomDock');
+      if (simDomain === 'MILITARY') {
+        dock.innerHTML = `
+          <button class="btn-pov ${currentMode==='soldier'?'active':''}" id="btnPov1" onclick="setCameraMode('soldier')">1: SOLDIER VISOR</button>
+          <button class="btn-pov ${currentMode==='uav'?'active':''}" id="btnPov2" onclick="setCameraMode('uav')">2: UAV AERIAL CHASE</button>
+          <button class="btn-pov ${currentMode==='ugv'?'active':''}" id="btnPov3" onclick="setCameraMode('ugv')">3: UGV ROVER DASH</button>
+          <button class="btn-pov ${currentMode==='orbit'?'active':''}" id="btnPov4" onclick="setCameraMode('orbit')">4: COMMANDER POV</button>
+          <button class="btn-pov ${currentMode==='ev-roof'?'active':''}" id="btnPov5" onclick="toggleSimMode()">5: SWITCH TO CIVILIAN EV</button>
+        `;
+      } else {
+        dock.innerHTML = `
+          <button class="btn-pov ${currentMode==='ev-windshield'?'active':''}" id="btnPov1" onclick="setCameraMode('ev-windshield')">1: WINDSHIELD POV (+1.2m)</button>
+          <button class="btn-pov ${currentMode==='ev-roof'?'active':''}" id="btnPov2" onclick="setCameraMode('ev-roof')">2: ROOF LIDAR CHASE (+1.8m)</button>
+          <button class="btn-pov ${currentMode==='ev-bumper'?'active':''}" id="btnPov3" onclick="setCameraMode('ev-bumper')">3: FRONT BUMPER SENSOR (+0.5m)</button>
+          <button class="btn-pov ${currentMode==='ev-corridor'?'active':''}" id="btnPov4" onclick="setCameraMode('ev-corridor')">4: BRAKING CORRIDOR</button>
+          <button class="btn-pov ${currentMode==='ev-ped'?'active':''}" id="btnPov5" onclick="setCameraMode('ev-ped')">5: PEDESTRIAN VRU FOCUS</button>
+        `;
+      }
+    }
+
     function setCameraMode(mode) {
       currentMode = mode;
-      document.querySelectorAll('.btn-pov').forEach(b => b.classList.remove('active'));
-      if (mode === 'soldier') document.getElementById('btnPov1').classList.add('active');
-      if (mode === 'uav') document.getElementById('btnPov2').classList.add('active');
-      if (mode === 'ugv') document.getElementById('btnPov3').classList.add('active');
-      if (mode === 'orbit') document.getElementById('btnPov4').classList.add('active');
-      if (mode === 'ev') document.getElementById('btnPov5').classList.add('active');
-      document.getElementById('compassContainer').style.display = (mode === 'soldier') ? 'flex' : 'none';
+      renderBottomDock();
+      document.getElementById('compassContainer').style.display = (mode === 'soldier' && simDomain === 'MILITARY') ? 'flex' : 'none';
     }
 
     function toggleSimMode() {
@@ -745,28 +952,105 @@
         document.getElementById('btnModeToggle').innerText = 'MODE: CIVILIAN (SMART EV)';
         document.getElementById('btnModeToggle').style.color = '#00ff88';
         document.getElementById('btnModeToggle').style.borderColor = '#00ff88';
-        setCameraMode('ev');
+        document.getElementById('brandTitle').innerText = 'SIM CIVILIAN: EGO-CENTRIC AUTOMOTIVE LIDAR';
+        
+        // Update PiP Feed Title
+        document.getElementById('pipTitle').innerText = 'RANGE-VIEW (32-CH)';
+        document.getElementById('pipSub').innerText = 'AZIMUTH [-60°..+60°]';
+
+        // Update Top Bar Pills to ADAS readouts
+        document.getElementById('pill1').innerHTML = `SPEED: <span class="pill-val" id="dispSpeed" style="color:var(--green)">36 KM/H</span>`;
+        document.getElementById('pill2').innerHTML = `AEB: <span class="pill-val" id="dispAeb" style="color:var(--cyan)">CRUISE NOMINAL</span>`;
+        document.getElementById('pill3').innerHTML = `PITCH SE(3): <span class="pill-val" id="dispPitch" style="color:#ffffff">+0.0°</span>`;
+        document.getElementById('pill4').innerHTML = `CLEARANCE: <span class="pill-val" style="color:var(--green)">+1.60m SAFE</span>`;
+
+        // Update Telemetry Drawer Header
+        document.getElementById('drawerTitle').innerText = 'AUTOMOTIVE ADAS KINEMATICS';
+        document.getElementById('row1Label').innerText = 'EGO SPEED:';
+        document.getElementById('row2Label').innerText = 'SUSP. PITCH:';
+        document.getElementById('row3Label').innerText = 'LOOKAHEAD:';
+        document.getElementById('row4Label').innerText = 'AEB STATUS:';
+        document.getElementById('row5Label').innerText = 'VRU TARGET:';
+        document.getElementById('row6Label').innerText = 'OCCLUSION:';
+
+        // Update Legend to ADAS Perception Elements
+        document.getElementById('legendTitle').innerText = 'AUTOMOTIVE PERCEPTION SYMBOLOGY';
+        document.getElementById('legendContent').innerHTML = `
+          <div class="legend-item"><div class="legend-ring" style="border-color: #00ff88; background: rgba(0,255,136,0.2);"></div><span>DYNAMIC CORRIDOR (W=3.5m)</span></div>
+          <div class="legend-item"><div class="legend-ring" style="border-color: #ff1744; background: rgba(255,23,68,0.2);"></div><span>PREDICTIVE AEB ENGAGE (TTC &le; 1.8s)</span></div>
+          <div class="legend-item"><div class="legend-ring" style="border-color: #00e5ff; background: rgba(0,229,255,0.2);"></div><span>GRAZING ARCS (1200 PTS)</span></div>
+          <div class="legend-item"><div class="legend-ring" style="border-color: #1e293b; background: rgba(10,15,25,0.8);"></div><span>RADIAL OCCLUSION SHADOW CONE</span></div>
+        `;
+
+        setCameraMode('ev-roof');
       } else {
         simDomain = 'MILITARY';
         document.getElementById('btnModeToggle').innerText = 'MODE: MILITARY (MUM-T)';
         document.getElementById('btnModeToggle').style.color = 'var(--cyan)';
         document.getElementById('btnModeToggle').style.borderColor = 'var(--cyan)';
+        document.getElementById('brandTitle').innerText = 'SIH26053 FOVEATED 3D PROVING GROUND';
+
+        // Restore PiP Feed Title
+        document.getElementById('pipTitle').innerText = 'UAV-01 BELLY GIMBAL [NADIR]';
+        document.getElementById('pipSub').innerText = '+30m';
+
+        // Restore Military Pills
+        document.getElementById('pill1').innerHTML = `SWaP RAM: <span class="pill-val" id="dispRam">12.16 MB (-99.24%)</span>`;
+        document.getElementById('pill2').innerHTML = `LATENCY: <span class="pill-val" id="dispLatency">1.46 ms</span>`;
+        document.getElementById('pill3').innerHTML = `MLS CELLS: <span class="pill-val" id="dispCells">51,357</span>`;
+        document.getElementById('pill4').innerHTML = `TETHER: <span class="pill-val" id="dispTether" style="color: var(--green);">18.2m [NOMINAL]</span>`;
+
+        // Restore Drawer Labels
+        document.getElementById('drawerTitle').innerText = 'MUM-T KINEMATICS';
+        document.getElementById('row1Label').innerText = 'UAV ORBIT:';
+        document.getElementById('row2Label').innerText = 'UAV ALTITUDE:';
+        document.getElementById('row3Label').innerText = 'UGV RC CAR:';
+        document.getElementById('row4Label').innerText = 'UGV SPEED:';
+        document.getElementById('row5Label').innerText = 'TARGET ALPHA:';
+        document.getElementById('row6Label').innerText = 'TARGET BRAVO:';
+
+        // Restore Concentric Foveated Legend
+        document.getElementById('legendTitle').innerText = 'CONCENTRIC FOVEATED TIERS';
+        document.getElementById('legendContent').innerHTML = `
+          <div class="legend-item"><div class="legend-ring" style="border-color: #ff3344; background: rgba(255,51,68,0.2);"></div><span>TIER 1: 10m (5cm Res - Bridge/Void)</span></div>
+          <div class="legend-item"><div class="legend-ring" style="border-color: #ffaa00; background: rgba(255,170,0,0.2);"></div><span>TIER 2: 30m (10cm Res - Enemies/Wall)</span></div>
+          <div class="legend-item"><div class="legend-ring" style="border-color: #00ff88; background: rgba(0,255,136,0.2);"></div><span>TIER 3: 60m (20cm Res - Church/Houses)</span></div>
+          <div class="legend-item"><div class="legend-ring" style="border-color: #00f0ff; background: rgba(0,240,255,0.2);"></div><span>TIER 4: 100m (50cm Res - Perimeter)</span></div>
+        `;
+
         setCameraMode('soldier');
       }
     }
 
+    // Initial dock render
+    renderBottomDock();
+
     // Keyboard Shortcuts (1, 2, 3, 4, 5, Space)
     window.addEventListener('keydown', (e) => {
-      if (e.key === '1') setCameraMode('soldier');
-      else if (e.key === '2') setCameraMode('uav');
-      else if (e.key === '3') setCameraMode('ugv');
-      else if (e.key === '4') setCameraMode('orbit');
-      else if (e.key === '5') setCameraMode('ev');
-      else if (e.code === 'Space') {
-        e.preventDefault();
-        const modes = ['soldier', 'uav', 'ugv', 'orbit', 'ev'];
-        const next = modes[(modes.indexOf(currentMode) + 1) % modes.length];
-        setCameraMode(next);
+      if (simDomain === 'MILITARY') {
+        if (e.key === '1') setCameraMode('soldier');
+        else if (e.key === '2') setCameraMode('uav');
+        else if (e.key === '3') setCameraMode('ugv');
+        else if (e.key === '4') setCameraMode('orbit');
+        else if (e.key === '5') toggleSimMode();
+        else if (e.code === 'Space') {
+          e.preventDefault();
+          const modes = ['soldier', 'uav', 'ugv', 'orbit'];
+          const next = modes[(modes.indexOf(currentMode) + 1) % modes.length];
+          setCameraMode(next);
+        }
+      } else {
+        if (e.key === '1') setCameraMode('ev-windshield');
+        else if (e.key === '2') setCameraMode('ev-roof');
+        else if (e.key === '3') setCameraMode('ev-bumper');
+        else if (e.key === '4') setCameraMode('ev-corridor');
+        else if (e.key === '5') setCameraMode('ev-ped');
+        else if (e.code === 'Space') {
+          e.preventDefault();
+          const modes = ['ev-windshield', 'ev-roof', 'ev-bumper', 'ev-corridor', 'ev-ped'];
+          const next = modes[(modes.indexOf(currentMode) + 1) % modes.length];
+          setCameraMode(next);
+        }
       }
     });
 
@@ -891,73 +1175,129 @@
       document.getElementById('tBravo').innerText = isOccluded ? 'COASTING [OCCLUDED]' : 'LOCKED [LINE-OF-SIGHT]';
       document.getElementById('tBravo').style.color = isOccluded ? '#ffaa00' : '#ff3344';
 
-      // 5. Update Sim Civilian EV & Pedestrian
+      // 5. Update Sim Civilian EV & Pedestrian Dynamics
       const pedX = 3.8 - ((simTime * 1.6) % 7.6);
       pedGroup.position.set(pedX, 0, 6.0);
 
       const evZ = evGroup.position.z;
       const distToPed = 6.0 - evZ;
-      const inBrakingZone = (distToPed > 0.5 && distToPed < 20.0 && Math.abs(pedX) < 1.75);
+      // Radial Occlusion Test: Pedestrian is occluded behind the delivery van (X in [2.0, 4.2] and distance > 10m)
+      const isPedOccluded = (pedX >= 2.0 && pedX <= 4.2 && distToPed > 10.0);
+      const inBrakingZone = (distToPed > 0.5 && distToPed < 22.0 && Math.abs(pedX) < 1.75 && !isPedOccluded);
 
       if (inBrakingZone) {
         corridorMat.color.setHex(0xff1744); // Red AEB emergency stop
-        evGroup.rotation.x = -0.04; // Nose-down pitch under braking
+        evGroup.rotation.x = -0.044; // -2.5° nose-down pitch under hard braking
+        currentEvSpeed = Math.max(0, currentEvSpeed - dt * 7.5);
       } else {
         corridorMat.color.setHex(0x00ff88); // Green nominal cruise
         evGroup.rotation.x = 0.0;
-        evGroup.position.z += 0.12;
+        currentEvSpeed = Math.min(10.0, currentEvSpeed + dt * 2.5);
+        evGroup.position.z += currentEvSpeed * dt;
         if (evGroup.position.z > 35.0) evGroup.position.z = -35.0;
       }
 
-      // 6. Camera POV Modes
-      if (currentMode === 'soldier') {
-        // Soldier standing at South entrance: (0, 1.8, -38) looking North towards underpass
-        camera.position.set(0, 1.8, -38);
-        camera.lookAt(0, 2.5, 0);
+      // 6. Camera POV Modes (Strictly Ego-Centric in Civilian Mode - No God-Mode Top-Down!)
+      if (simDomain === 'MILITARY') {
+        if (currentMode === 'soldier') {
+          // Soldier standing at South entrance: (0, 1.8, -38) looking North towards underpass
+          camera.position.set(0, 1.8, -38);
+          camera.lookAt(0, 2.5, 0);
 
-        // Update dynamic compass tape
-        const fwd = new THREE.Vector3();
-        camera.getWorldDirection(fwd);
-        const deg = (Math.atan2(fwd.x, fwd.z) * 180 / Math.PI + 360) % 360;
-        tape.style.transform = `translateX(${-deg * 2.2}px)`;
-      } else if (currentMode === 'uav') {
-        // UAV Chase Cam (10m behind, looking down)
-        const fwd = new THREE.Vector3(0, 0, 1).applyAxisAngle(new THREE.Vector3(0, 1, 0), uavGroup.rotation.y);
-        camera.position.copy(uavGroup.position).sub(fwd.clone().multiplyScalar(10)).add(new THREE.Vector3(0, 4, 0));
-        camera.lookAt(uavGroup.position.clone().add(fwd.clone().multiplyScalar(15)));
-      } else if (currentMode === 'ugv') {
-        // UGV Bumper Cam (Mounted on car hood looking forward)
-        const fwd = new THREE.Vector3(0, 0, 1).applyAxisAngle(new THREE.Vector3(0, 1, 0), ugvGroup.rotation.y);
-        camera.position.copy(ugvGroup.position).add(new THREE.Vector3(0, 0.8, 0)).add(fwd.clone().multiplyScalar(1.2));
-        camera.lookAt(camera.position.clone().add(fwd.clone().multiplyScalar(10)));
-      } else if (currentMode === 'orbit') {
-        // Commander Tactical Overview (Interactive orbit view)
-        const camY = Math.sin(orbitPitch) * orbitDistance;
-        const camR = Math.cos(orbitPitch) * orbitDistance;
-        camera.position.set(Math.sin(orbitAngle) * camR, camY, Math.cos(orbitAngle) * camR);
-        camera.lookAt(0, 3, 0);
-      } else if (currentMode === 'ev') {
-        // Civilian EV Hood / Chase Cam
-        camera.position.set(evGroup.position.x, 2.2, evGroup.position.z - 6.5);
-        camera.lookAt(evGroup.position.x, 1.5, evGroup.position.z + 20.0);
+          // Update dynamic compass tape
+          const fwd = new THREE.Vector3();
+          camera.getWorldDirection(fwd);
+          const deg = (Math.atan2(fwd.x, fwd.z) * 180 / Math.PI + 360) % 360;
+          tape.style.transform = `translateX(${-deg * 2.2}px)`;
+        } else if (currentMode === 'uav') {
+          // UAV Chase Cam (10m behind, looking down)
+          const fwd = new THREE.Vector3(0, 0, 1).applyAxisAngle(new THREE.Vector3(0, 1, 0), uavGroup.rotation.y);
+          camera.position.copy(uavGroup.position).sub(fwd.clone().multiplyScalar(10)).add(new THREE.Vector3(0, 4, 0));
+          camera.lookAt(uavGroup.position.clone().add(fwd.clone().multiplyScalar(15)));
+        } else if (currentMode === 'ugv') {
+          // UGV Bumper Cam (Mounted on car hood looking forward)
+          const fwd = new THREE.Vector3(0, 0, 1).applyAxisAngle(new THREE.Vector3(0, 1, 0), ugvGroup.rotation.y);
+          camera.position.copy(ugvGroup.position).add(new THREE.Vector3(0, 0.8, 0)).add(fwd.clone().multiplyScalar(1.2));
+          camera.lookAt(camera.position.clone().add(fwd.clone().multiplyScalar(10)));
+        } else if (currentMode === 'orbit') {
+          // Commander Tactical Overview (Interactive orbit view)
+          const camY = Math.sin(orbitPitch) * orbitDistance;
+          const camR = Math.cos(orbitPitch) * orbitDistance;
+          camera.position.set(Math.sin(orbitAngle) * camR, camY, Math.cos(orbitAngle) * camR);
+          camera.lookAt(0, 3, 0);
+        }
+      } else {
+        // CIVILIAN EV MODES: STRICTLY VEHICLE-CENTRIC PERSPECTIVES
+        if (currentMode === 'ev-windshield') {
+          // Driver Windshield POV: +1.25m Eye-Level looking ahead through windshield
+          camera.position.set(evGroup.position.x, 1.25, evGroup.position.z + 0.4);
+          camera.lookAt(evGroup.position.x, 1.2, evGroup.position.z + 40.0);
+        } else if (currentMode === 'ev-bumper') {
+          // Front Bumper Sensor: +0.5m grazing asphalt view
+          camera.position.set(evGroup.position.x, 0.5, evGroup.position.z + 2.2);
+          camera.lookAt(evGroup.position.x, 0.4, evGroup.position.z + 30.0);
+        } else if (currentMode === 'ev-corridor') {
+          // Dynamic Braking Corridor View: angled lookahead showing safety carpet
+          camera.position.set(evGroup.position.x - 2.8, 2.0, evGroup.position.z - 2.0);
+          camera.lookAt(evGroup.position.x, 0.8, evGroup.position.z + 18.0);
+        } else if (currentMode === 'ev-ped') {
+          // Pedestrian VRU Close-up Focus from Vehicle
+          camera.position.set(evGroup.position.x + 1.8, 1.6, evGroup.position.z + 2.0);
+          camera.lookAt(pedGroup.position.x, 1.0, pedGroup.position.z);
+        } else {
+          // Default: Roof LiDAR Chase Cam (+2.2m looking forward along corridor)
+          camera.position.set(evGroup.position.x, 2.2, evGroup.position.z - 6.5);
+          camera.lookAt(evGroup.position.x, 1.5, evGroup.position.z + 25.0);
+        }
       }
 
       // Update Telemetry Panel Numbers
-      document.getElementById('tUavPos').innerText = `X: ${uX.toFixed(1)}m, Y: ${uZ.toFixed(1)}m`;
-      document.getElementById('tUgvPos').innerText = `X: ${ugvX.toFixed(1)}m, Y: ${ugvZ.toFixed(1)}m`;
+      if (simDomain === 'MILITARY') {
+        document.getElementById('tUavPos').innerText = `X: ${uX.toFixed(1)}m, Y: ${uZ.toFixed(1)}m`;
+        document.getElementById('tUgvPos').innerText = `X: ${ugvX.toFixed(1)}m, Y: ${ugvZ.toFixed(1)}m`;
+      } else {
+        const spdKmh = (currentEvSpeed * 3.6).toFixed(1);
+        const pitchDeg = (evGroup.rotation.x * 180 / Math.PI).toFixed(1);
+        const ttc = inBrakingZone ? (distToPed / Math.max(1.0, currentEvSpeed)).toFixed(1) + 's' : '> 5.0s';
+
+        const dSpd = document.getElementById('dispSpeed');
+        if (dSpd) dSpd.innerText = `${spdKmh} KM/H`;
+        const dAeb = document.getElementById('dispAeb');
+        if (dAeb) {
+          dAeb.innerText = inBrakingZone ? 'AEB BRAKING (-7.5 m/s²)' : 'CRUISE NOMINAL';
+          dAeb.style.color = inBrakingZone ? '#ff1744' : '#00ff88';
+        }
+        const dPitch = document.getElementById('dispPitch');
+        if (dPitch) dPitch.innerText = `${pitchDeg}°`;
+
+        document.getElementById('tUavPos').innerText = `${spdKmh} km/h (${currentEvSpeed.toFixed(1)} m/s)`;
+        document.getElementById('tUavAlt').innerText = `${pitchDeg}° (SE3 COMPENSATED)`;
+        document.getElementById('tUgvPos').innerText = `25.0m (W=3.5m)`;
+        document.getElementById('tUgvSpeed').innerText = inBrakingZone ? 'AEB TRIGGERED' : 'NOMINAL';
+        document.getElementById('tAlpha').innerText = isPedOccluded ? 'OCCLUDED [IN SHADOW]' : (inBrakingZone ? `VRU HAZARD (${ttc})` : `LOCKED (${distToPed.toFixed(1)}m)`);
+        document.getElementById('tAlpha').style.color = inBrakingZone ? '#ff1744' : (isPedOccluded ? '#ffaa00' : '#00ff88');
+        document.getElementById('tBravo').innerText = isPedOccluded ? 'BEHIND DELIVERY VAN' : 'LINE-OF-SIGHT';
+        document.getElementById('tBravo').style.color = isPedOccluded ? '#ffaa00' : '#00ff88';
+      }
 
       // 6. Draw 2D HUD Overlays & Reticles
-      drawHudReticles(tStat);
+      drawHudReticles(tStat, inBrakingZone, distToPed, pedX, isPedOccluded);
 
       // 7. Render 3D Scene
       renderer.render(scene, camera);
 
-      // 8. Render Top-Down PiP Feed
-      renderPipFeed();
+      // 8. Render PiP Feed (Top-Down Nadir in Military, Native Range-View in Civilian)
+      if (simDomain === 'MILITARY') {
+        renderPipFeed();
+      } else {
+        renderCivilianRangeView(pedX, inBrakingZone, isPedOccluded);
+      }
     }
 
+    let currentEvSpeed = 10.0; // 36 km/h nominal
+
     // -------------------------------------------------------------
-    // 2D HUD RETICLE BRACKETS (SOLDIER VISOR & COMMANDER C2)
+    // 2D HUD RETICLE BRACKETS & ADAS COCKPIT OVERLAY
     // -------------------------------------------------------------
     function toScreenPos(objPos) {
       const v = objPos.clone().project(camera);
@@ -968,12 +1308,17 @@
       };
     }
 
-    function drawHudReticles(tetherStatus) {
+    function drawHudReticles(tetherStatus, inBrakingZone, distToPed, pedX, isPedOccluded) {
       hudCanvas.width = window.innerWidth;
       hudCanvas.height = window.innerHeight;
       hudCtx.clearRect(0, 0, hudCanvas.width, hudCanvas.height);
 
-      // Only render HUD reticles in Soldier POV or Commander POV
+      if (simDomain === 'CIVILIAN') {
+        drawCivilianAdasHud(inBrakingZone, distToPed, pedX, isPedOccluded);
+        return;
+      }
+
+      // MILITARY HUD RETICLES
       if (currentMode !== 'soldier' && currentMode !== 'orbit') return;
 
       const refPos = (currentMode === 'soldier') ? new THREE.Vector3(0, 1.8, -38) : camera.position;
@@ -1063,7 +1408,80 @@
     }
 
     // -------------------------------------------------------------
-    // TOP-DOWN PIP FEED RENDERING
+    // CIVILIAN ADAS HUD (AEB BANNER, SPEEDOMETER, VRU BRACKET)
+    // -------------------------------------------------------------
+    function drawCivilianAdasHud(inBrakingZone, distToPed, pedX, isPedOccluded) {
+      const cx = window.innerWidth / 2;
+      const cy = window.innerHeight / 2;
+
+      // 1. Digital Speedometer & Cockpit Gauge (Top Center)
+      hudCtx.fillStyle = 'rgba(6, 12, 22, 0.88)';
+      hudCtx.fillRect(cx - 150, 64, 300, 52);
+      hudCtx.strokeStyle = inBrakingZone ? '#ff1744' : '#00e5ff';
+      hudCtx.lineWidth = 1.5;
+      hudCtx.strokeRect(cx - 150, 64, 300, 52);
+
+      const spdKmh = (currentEvSpeed * 3.6).toFixed(0);
+      hudCtx.fillStyle = inBrakingZone ? '#ff1744' : '#00ff88';
+      hudCtx.font = 'bold 24px JetBrains Mono';
+      hudCtx.textAlign = 'center';
+      hudCtx.fillText(`${spdKmh} KM/H`, cx - 60, 100);
+
+      hudCtx.fillStyle = '#94a3b8';
+      hudCtx.font = 'bold 10px JetBrains Mono';
+      hudCtx.fillText(inBrakingZone ? 'AEB EMERGENCY STOP' : 'AUTOPILOT D-MODE', cx + 55, 88);
+
+      hudCtx.fillStyle = '#ffffff';
+      hudCtx.font = 'bold 10px JetBrains Mono';
+      hudCtx.fillText(`LOOKAHEAD: 25.0m | SE3: -2.5°`, cx + 55, 104);
+      hudCtx.textAlign = 'start';
+
+      // 2. VRU Pedestrian Detection Bracket (Target Projection on Screen)
+      const pPos = pedGroup.position.clone().add(new THREE.Vector3(0, 1.0, 0));
+      const sPos = toScreenPos(pPos);
+      if (sPos.z > 0 && sPos.z < 1.0) {
+        const boxSize = Math.max(18, Math.min(65, 300 / Math.max(5, distToPed)));
+
+        hudCtx.save();
+        hudCtx.translate(sPos.x, sPos.y);
+
+        // Bounding Box (Red if in braking hazard, Amber if occluded)
+        hudCtx.strokeStyle = inBrakingZone ? '#ff1744' : (isPedOccluded ? '#ffaa00' : '#00e5ff');
+        hudCtx.lineWidth = 2.2;
+        hudCtx.strokeRect(-boxSize / 2, -boxSize, boxSize, boxSize * 2);
+
+        // Corner ticks
+        const cLen = 6;
+        hudCtx.fillStyle = hudCtx.strokeStyle;
+        hudCtx.fillRect(-boxSize / 2, -boxSize, cLen, 2);
+        hudCtx.fillRect(boxSize / 2 - cLen, -boxSize, cLen, 2);
+        hudCtx.fillRect(-boxSize / 2, boxSize - 2, cLen, 2);
+        hudCtx.fillRect(boxSize / 2 - cLen, boxSize - 2, cLen, 2);
+
+        // Callout Banner
+        const tagW = 180;
+        const tagH = 30;
+        hudCtx.fillStyle = 'rgba(6, 12, 22, 0.94)';
+        hudCtx.fillRect(-tagW / 2, -boxSize - tagH - 6, tagW, tagH);
+        hudCtx.strokeStyle = hudCtx.strokeStyle;
+        hudCtx.lineWidth = 1;
+        hudCtx.strokeRect(-tagW / 2, -boxSize - tagH - 6, tagW, tagH);
+
+        hudCtx.fillStyle = inBrakingZone ? '#ff1744' : (isPedOccluded ? '#ffaa00' : '#00e5ff');
+        hudCtx.font = 'bold 10px JetBrains Mono';
+        hudCtx.fillText(`[VRU] PEDESTRIAN ${isPedOccluded ? '[OCCLUDED]' : (inBrakingZone ? '[COLLISION]' : '[LOCKED]')}`, -tagW / 2 + 6, -boxSize - 18);
+
+        const ttcStr = inBrakingZone ? (distToPed / Math.max(0.5, currentEvSpeed)).toFixed(1) + 's' : '> 5.0s';
+        hudCtx.fillStyle = '#ffffff';
+        hudCtx.font = '9px JetBrains Mono';
+        hudCtx.fillText(`DIST: ${distToPed.toFixed(1)}m | TTC: ${ttcStr} | SPD: 1.6m/s`, -tagW / 2 + 6, -boxSize - 8);
+
+        hudCtx.restore();
+      }
+    }
+
+    // -------------------------------------------------------------
+    // TOP-DOWN PIP FEED RENDERING (MILITARY ONLY)
     // -------------------------------------------------------------
     function renderPipFeed() {
       pipCanvas.width = pipCanvas.clientWidth;
@@ -1103,6 +1521,69 @@
         pipCtx.fill();
         pipCtx.fillText(`T-${idx+1}`, pCx + hRelX + 6, pCy + hRelZ);
       });
+    }
+
+    // -------------------------------------------------------------
+    // NATIVE SPHERICAL RANGE-VIEW (32-CH MATRIX) & CAPPED MLS
+    // -------------------------------------------------------------
+    function renderCivilianRangeView(pedX, inBrakingZone, isPedOccluded) {
+      pipCanvas.width = pipCanvas.clientWidth;
+      pipCanvas.height = pipCanvas.clientHeight;
+      pipCtx.fillStyle = '#02050a';
+      pipCtx.fillRect(0, 0, pipCanvas.width, pipCanvas.height);
+
+      const w = pipCanvas.width;
+      const h = pipCanvas.height;
+      const channels = 32;
+      const beams = 64;
+      const cellW = w / beams;
+      const cellH = (h - 26) / channels;
+
+      for (let c = 0; c < channels; c++) {
+        // Laser pitch: c=0 is -25° (near bumper), c=31 is +15° (overhead bridge)
+        const pitchDeg = -25.0 + (40.0 * c / 31.0);
+
+        for (let b = 0; b < beams; b++) {
+          const azimuthDeg = -60.0 + (120.0 * b / 63.0);
+          let color = '#02050a';
+
+          if (pitchDeg < -2.0) {
+            // Ground returns on asphalt (concentric hyperbolic arcs)
+            const range = -1.8 / Math.sin(pitchDeg * Math.PI / 180);
+            if (range > 1.0 && range < 60.0) {
+              const val = Math.max(20, Math.min(255, 255 - range * 3.8));
+              color = `rgb(0, ${Math.floor(val * 0.7)}, ${Math.floor(val)})`;
+            }
+          } else if (pitchDeg > 4.0 && pitchDeg < 12.0 && Math.abs(azimuthDeg) < 22.0) {
+            color = '#00e5ff'; // Underpass concrete ceiling deck slab
+          }
+
+          // Parked delivery van block at right curb (~ +12° azimuth)
+          if (pitchDeg > -8.0 && pitchDeg < 3.0 && azimuthDeg > 8.0 && azimuthDeg < 22.0) {
+            color = '#38bdf8';
+          }
+
+          // Crossing pedestrian vertical return stripe
+          const pedAz = (pedX - evGroup.position.x) * 4.2;
+          if (!isPedOccluded && Math.abs(azimuthDeg - pedAz) < 3.5 && pitchDeg > -8.0 && pitchDeg < 0.0) {
+            color = inBrakingZone ? '#ff1744' : '#ff9100';
+          }
+
+          if (color !== '#02050a') {
+            pipCtx.fillStyle = color;
+            pipCtx.fillRect(b * cellW, c * cellH, cellW + 0.5, cellH + 0.5);
+          }
+        }
+      }
+
+      // Longitudinal Capped MLS Clearance Headroom Banner at bottom of PiP
+      pipCtx.fillStyle = 'rgba(6, 12, 22, 0.95)';
+      pipCtx.fillRect(0, h - 24, w, 24);
+      pipCtx.strokeStyle = 'rgba(0, 229, 255, 0.3)';
+      pipCtx.strokeRect(0, h - 24, w, 24);
+      pipCtx.fillStyle = '#00ff88';
+      pipCtx.font = 'bold 9px JetBrains Mono';
+      pipCtx.fillText('CAPPED MLS: +1.60m SAFE HEADROOM', 8, h - 8);
     }
 
     // Window Resize Handler

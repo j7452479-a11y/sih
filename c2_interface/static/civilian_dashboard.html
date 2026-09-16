@@ -3,13 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SIH26053 - Sim Civilian: Autonomous EV Perception & Predictive AEB</title>
+    <title>SIH26053 - Sim Civilian: Ego-Centric Automotive LiDAR & Predictive AEB</title>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;800;900&family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
         :root {
-            --bg-base: #06090e;
-            --bg-card: rgba(13, 20, 32, 0.85);
-            --border-card: rgba(0, 229, 255, 0.25);
+            --bg-base: #04070c;
+            --bg-card: rgba(10, 16, 26, 0.88);
+            --border-card: rgba(0, 229, 255, 0.22);
             --accent-cyan: #00e5ff;
             --accent-green: #00ff88;
             --accent-red: #ff1744;
@@ -22,6 +23,7 @@
             box-sizing: border-box;
             margin: 0;
             padding: 0;
+            user-select: none;
         }
 
         body {
@@ -36,13 +38,14 @@
 
         /* Header Bar */
         header {
-            background: rgba(10, 16, 26, 0.95);
+            background: rgba(8, 14, 22, 0.95);
             border-bottom: 1px solid var(--border-card);
-            padding: 12px 24px;
+            padding: 10px 24px;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            backdrop-filter: blur(10px);
+            backdrop-filter: blur(12px);
+            z-index: 20;
         }
 
         .header-title {
@@ -56,15 +59,15 @@
             color: #000;
             font-family: 'Orbitron', sans-serif;
             font-weight: 900;
-            font-size: 14px;
-            padding: 5px 10px;
+            font-size: 13px;
+            padding: 4px 10px;
             border-radius: 4px;
             letter-spacing: 1px;
         }
 
         h1 {
             font-family: 'Orbitron', sans-serif;
-            font-size: 16px;
+            font-size: 15px;
             font-weight: 700;
             letter-spacing: 1.5px;
             color: #fff;
@@ -72,14 +75,14 @@
 
         .nav-links {
             display: flex;
-            gap: 12px;
+            gap: 10px;
         }
 
         .btn-nav {
             background: rgba(0, 229, 255, 0.1);
             border: 1px solid var(--border-card);
             color: var(--accent-cyan);
-            padding: 6px 14px;
+            padding: 6px 12px;
             border-radius: 4px;
             font-family: 'Orbitron', sans-serif;
             font-size: 11px;
@@ -104,28 +107,31 @@
         /* Main Dashboard Grid */
         .dashboard-container {
             display: grid;
-            grid-template-columns: 340px 1fr 340px;
-            gap: 16px;
-            padding: 16px;
+            grid-template-columns: 320px 1fr 340px;
+            gap: 14px;
+            padding: 14px;
             flex: 1;
+            height: calc(100vh - 58px);
+            overflow: hidden;
         }
 
         .glass-panel {
             background: var(--bg-card);
             border: 1px solid var(--border-card);
             border-radius: 8px;
-            padding: 18px;
+            padding: 14px;
             backdrop-filter: blur(12px);
             display: flex;
             flex-direction: column;
-            gap: 16px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            gap: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
             position: relative;
+            overflow-y: auto;
         }
 
         .panel-header {
             font-family: 'Orbitron', sans-serif;
-            font-size: 13px;
+            font-size: 12px;
             font-weight: 700;
             color: var(--accent-cyan);
             letter-spacing: 1.2px;
@@ -133,7 +139,7 @@
             align-items: center;
             justify-content: space-between;
             border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-            padding-bottom: 8px;
+            padding-bottom: 6px;
         }
 
         /* Speedometer & Cockpit Gauge */
@@ -142,12 +148,12 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            padding: 10px 0;
+            padding: 6px 0;
         }
 
         .speed-dial {
-            width: 170px;
-            height: 170px;
+            width: 150px;
+            height: 150px;
             border-radius: 50%;
             border: 3px solid rgba(0, 229, 255, 0.2);
             border-top: 3px solid var(--accent-cyan);
@@ -161,7 +167,7 @@
 
         .speed-value {
             font-family: 'Orbitron', sans-serif;
-            font-size: 48px;
+            font-size: 42px;
             font-weight: 900;
             color: #fff;
             line-height: 1;
@@ -169,7 +175,7 @@
 
         .speed-unit {
             font-family: 'Orbitron', sans-serif;
-            font-size: 12px;
+            font-size: 11px;
             color: var(--accent-cyan);
             letter-spacing: 2px;
             margin-top: 4px;
@@ -178,13 +184,13 @@
         .drive-mode-bar {
             display: flex;
             gap: 8px;
-            margin-top: 14px;
+            margin-top: 10px;
         }
 
         .mode-chip {
-            padding: 4px 10px;
+            padding: 3px 8px;
             font-family: 'Orbitron', sans-serif;
-            font-size: 11px;
+            font-size: 10px;
             font-weight: 700;
             border-radius: 4px;
             background: rgba(255, 255, 255, 0.05);
@@ -198,11 +204,11 @@
             border-color: var(--accent-cyan);
         }
 
-        /* Dynamic Braking Corridor Banner */
+        /* AEB Status Banner */
         .aeb-alert-banner {
             background: rgba(0, 255, 136, 0.12);
             border: 1px solid var(--accent-green);
-            padding: 12px;
+            padding: 10px;
             border-radius: 6px;
             text-align: center;
             transition: all 0.3s;
@@ -221,7 +227,7 @@
 
         .aeb-status-title {
             font-family: 'Orbitron', sans-serif;
-            font-size: 14px;
+            font-size: 13px;
             font-weight: 900;
             letter-spacing: 1.5px;
             color: var(--accent-green);
@@ -232,71 +238,119 @@
         }
 
         .aeb-desc {
-            font-size: 12px;
+            font-size: 11px;
             color: var(--text-primary);
             margin-top: 4px;
         }
 
-        /* Radar Corridor Canvas */
-        .radar-panel {
-            position: relative;
+        /* 3D Ego Viewport Container */
+        .ego-viewport-panel {
             display: flex;
             flex-direction: column;
             height: 100%;
+            position: relative;
+            padding: 0 !important;
+            overflow: hidden !important;
         }
 
-        #corridorCanvas {
+        #ego3dContainer {
             width: 100%;
-            height: 100%;
-            min-height: 480px;
-            background: #03070d;
-            border-radius: 6px;
-            border: 1px solid rgba(0, 229, 255, 0.2);
+            flex: 1;
+            position: relative;
+            background: #020408;
         }
 
-        /* Overhead Clearance Gauge */
-        .clearance-gauge {
-            background: rgba(255, 255, 255, 0.03);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            border-radius: 6px;
-            padding: 14px;
+        .viewport-overlay-controls {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            display: flex;
+            gap: 8px;
+            z-index: 10;
         }
 
-        .clearance-row {
+        .btn-pov {
+            background: rgba(6, 14, 24, 0.85);
+            border: 1px solid var(--border-card);
+            color: var(--text-muted);
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 10px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-pov.active, .btn-pov:hover {
+            background: rgba(0, 229, 255, 0.25);
+            color: var(--accent-cyan);
+            border-color: var(--accent-cyan);
+        }
+
+        .viewport-status-badge {
+            position: absolute;
+            top: 12px;
+            left: 12px;
+            background: rgba(6, 14, 24, 0.85);
+            border: 1px solid var(--border-card);
+            border-radius: 4px;
+            padding: 5px 10px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 10px;
+            font-weight: 700;
+            color: var(--accent-cyan);
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* Native Spherical Range View Container */
+        .range-view-container {
+            height: 140px;
+            background: rgba(4, 8, 14, 0.95);
+            border-top: 1px solid var(--border-card);
+            padding: 8px 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            z-index: 10;
+        }
+
+        .range-header {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 10px;
+            font-weight: 700;
+            color: var(--accent-cyan);
             display: flex;
             justify-content: space-between;
-            margin-bottom: 8px;
-            font-size: 13px;
+            align-items: center;
         }
 
-        .clearance-bar-container {
+        #rangeCanvas {
             width: 100%;
-            height: 14px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 7px;
-            overflow: hidden;
-            position: relative;
-            margin: 10px 0;
-        }
-
-        .clearance-bar-fill {
-            height: 100%;
-            background: linear-gradient(90deg, #00e5ff, #00ff88);
-            width: 80%;
-            border-radius: 7px;
-            transition: width 0.3s;
-        }
-
-        .clearance-badge {
-            display: inline-block;
-            padding: 4px 8px;
-            background: rgba(0, 255, 136, 0.15);
-            border: 1px solid var(--accent-green);
-            color: var(--accent-green);
-            font-family: 'Orbitron', sans-serif;
-            font-size: 11px;
-            font-weight: 700;
+            height: 90px;
+            background: #000;
             border-radius: 4px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            image-rendering: pixelated;
+        }
+
+        /* Longitudinal Cross-Section Profile */
+        .profile-container {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 6px;
+            padding: 10px;
+        }
+
+        #profileCanvas {
+            width: 100%;
+            height: 110px;
+            background: #03070d;
+            border-radius: 4px;
+            border: 1px solid rgba(0, 229, 255, 0.15);
             margin-top: 6px;
         }
 
@@ -304,18 +358,18 @@
         .stat-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 10px;
+            gap: 8px;
         }
 
         .stat-card {
             background: rgba(255, 255, 255, 0.03);
             border: 1px solid rgba(255, 255, 255, 0.06);
             border-radius: 6px;
-            padding: 10px;
+            padding: 8px;
         }
 
         .stat-label {
-            font-size: 11px;
+            font-size: 10px;
             color: var(--text-muted);
             text-transform: uppercase;
             letter-spacing: 0.8px;
@@ -323,51 +377,169 @@
 
         .stat-val {
             font-family: 'Orbitron', sans-serif;
-            font-size: 18px;
+            font-size: 15px;
             font-weight: 700;
             color: #fff;
-            margin-top: 4px;
+            margin-top: 3px;
         }
 
-        /* Live Log */
+        /* Log Box */
         .log-box {
             background: #020408;
             border: 1px solid rgba(255, 255, 255, 0.08);
             border-radius: 6px;
-            padding: 10px;
+            padding: 8px;
             font-family: monospace;
-            font-size: 11px;
-            height: 140px;
+            font-size: 10px;
+            height: 100px;
             overflow-y: auto;
             color: #94a3b8;
         }
 
         .log-entry {
-            margin-bottom: 4px;
-            line-height: 1.4;
+            margin-bottom: 3px;
+            line-height: 1.3;
         }
 
-        .log-entry.warn {
-            color: var(--accent-red);
-            font-weight: bold;
-        }
+        .log-entry.warn { color: var(--accent-red); font-weight: bold; }
+        .log-entry.info { color: var(--accent-cyan); }
 
-        .log-entry.info {
+        /* Research Modal */
+        .modal-backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(2, 6, 12, 0.85);
+            backdrop-filter: blur(8px);
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .modal-card {
+            background: #08101a;
+            border: 1px solid var(--accent-cyan);
+            box-shadow: 0 0 35px rgba(0, 229, 255, 0.25);
+            border-radius: 8px;
+            width: 900px;
+            max-width: 95vw;
+            max-height: 85vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .modal-header {
+            padding: 16px 20px;
+            background: rgba(14, 24, 38, 0.95);
+            border-bottom: 1px solid var(--border-card);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .btn-close {
+            background: transparent;
+            border: none;
+            color: #92a9bd;
+            font-size: 24px;
+            cursor: pointer;
+            line-height: 1;
+        }
+        .btn-close:hover { color: var(--accent-red); }
+        .modal-body {
+            padding: 20px;
+            overflow-y: auto;
+            font-size: 13px;
+            line-height: 1.6;
+            color: #cad8e6;
+        }
+        .research-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 16px;
+            margin-top: 12px;
+        }
+        .research-card {
+            background: rgba(14, 24, 38, 0.6);
+            border: 1px solid var(--border-card);
+            border-radius: 6px;
+            padding: 14px;
+            border-left: 3px solid var(--accent-cyan);
+        }
+        .card-title {
+            font-size: 12px;
+            font-weight: 800;
             color: var(--accent-cyan);
+            margin-bottom: 6px;
+        }
+        .card-code {
+            font-family: monospace;
+            font-size: 11px;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 2px 6px;
+            border-radius: 3px;
+            color: var(--accent-green);
         }
     </style>
 </head>
 <body>
 
+    <!-- RESEARCH MODAL: HOW AUTOMOTIVE EV LIDAR WORKS -->
+    <div id="researchModal" class="modal-backdrop" style="display: none;">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <span style="background:var(--accent-cyan); color:#000; padding:3px 8px; border-radius:4px; font-weight:800; font-size:11px;">PHYSICS RESEARCH</span>
+                    <span style="font-weight:800; font-size:14px; letter-spacing:1px; color:#fff;">HOW AUTOMOTIVE EV LIDAR WORKS (VS AERIAL UAV)</span>
+                </div>
+                <button class="btn-close" onclick="document.getElementById('researchModal').style.display='none'">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div style="font-size:12px; color:#94a3b8; margin-bottom:12px;">
+                    An Electric Vehicle operates at ground elevation (0.5m - 2.0m) with strictly forward-facing and perimeter sensors. It has <strong>no access to top-down / aerial views</strong>.
+                </div>
+                <div class="research-grid">
+                    <div class="research-card">
+                        <div class="card-title">1. EGO-CENTRIC PERSPECTIVE ONLY</div>
+                        <p>Unlike UAVs flying at +30m with top-down views, an EV looks horizontally along the road. All points are recorded in the vehicle's body frame (X_right, Y_forward, Z_up). Top-down views are physically non-existent for an EV.</p>
+                    </div>
+                    <div class="research-card">
+                        <div class="card-title">2. GRAZING-ANGLE ROAD ARCS</div>
+                        <p>At depression angle &alpha; &lt; 0, ground hit distance is <span class="card-code">d = h / tan(-&alpha;)</span>. At grazing angles (&le;2°), small angle steps jump tens of meters down the road, creating expanding elliptical rings on the asphalt.</p>
+                    </div>
+                    <div class="research-card">
+                        <div class="card-title">3. RADIAL OCCLUSION SHADOW CONES</div>
+                        <p>Opaque obstacles (parked delivery van, concrete pillars) block laser rays, casting a dark radial shadow cone on the asphalt. Zero laser returns penetrate behind the obstacle until a pedestrian steps out into line-of-sight.</p>
+                    </div>
+                    <div class="research-card">
+                        <div class="card-title">4. SE(3) SUSPENSION NOSE-DIVE COMP</div>
+                        <p>Under hard braking (-7.5 m/s²), front suspension compresses, pitching the vehicle down by -2.5°. 6-DOF IMU applies <span class="card-code">P_corr = R_pitch(-&theta;) * P_raw</span> to prevent treating flat road as an uphill obstacle wall.</p>
+                    </div>
+                    <div class="research-card">
+                        <div class="card-title">5. NATIVE SPHERICAL RANGE-VIEW</div>
+                        <p>Rather than slow 3D grids, automotive edge hardware (NVIDIA DRIVE Orin) projects returns to a 2D Range Image Matrix (32 channels &times; 64 beams) mapping pitch vs azimuth. RangeNet++ runs 2D convolutions at 60+ FPS.</p>
+                    </div>
+                    <div class="research-card">
+                        <div class="card-title">6. CAPPED MLS LONGITUDINAL CLEARANCE</div>
+                        <p>For highway underpasses and tunnels, Capped Multi-Level Surfaces separate road surface [0.0m, 0.2m] from concrete ceiling [3.2m, 4.0m], proving +1.60m safe headroom without false blockage.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <header>
         <div class="header-title">
             <span class="brand-badge">SIM CIVILIAN</span>
-            <h1>AUTONOMOUS EV PERCEPTION & PREDICTIVE AEB (SIH26053)</h1>
+            <h1>EGO-CENTRIC AUTOMOTIVE LIDAR & PREDICTIVE AEB (SIH26053)</h1>
         </div>
         <div class="nav-links">
-            <a href="/sim" class="btn-nav">3D SIMULATOR</a>
+            <button class="btn-nav" style="cursor:pointer; background:rgba(0,255,136,0.15); border-color:var(--accent-green); color:var(--accent-green);" onclick="document.getElementById('researchModal').style.display='flex'">📖 HOW EV LIDAR WORKS</button>
+            <a href="/sim" class="btn-nav">3D MULTI-AGENT SIM</a>
             <a href="/c2" class="btn-nav">TACTICAL MUM-T</a>
-            <a href="/civilian" class="btn-nav active">CIVILIAN EV HUD</a>
+            <a href="/civilian" class="btn-nav active">CIVILIAN EV COCKPIT</a>
         </div>
     </header>
 
@@ -375,8 +547,8 @@
         <!-- Left Column: Cockpit & Speedometer -->
         <div class="glass-panel">
             <div class="panel-header">
-                <span>EGO-VEHICLE INSTRUMENT CLUSTER</span>
-                <span style="color: var(--accent-green);">● ACTIVE 20 Hz</span>
+                <span>EGO-INSTRUMENT CLUSTER</span>
+                <span style="color: var(--accent-green);">● 20 Hz</span>
             </div>
 
             <div class="cluster-center">
@@ -415,7 +587,7 @@
                     <div class="stat-val" id="ttcVal">> 5.0 s</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-label">Lateral Envelope</div>
+                    <div class="stat-label">Safety Envelope W</div>
                     <div class="stat-val">3.5 m</div>
                 </div>
             </div>
@@ -433,277 +605,529 @@
             </div>
         </div>
 
-        <!-- Center Column: Dynamic Braking Corridor Canvas -->
-        <div class="glass-panel radar-panel">
-            <div class="panel-header">
-                <span>PREDICTIVE BRAKING CORRIDOR & RADIAL OCCLUSIONS</span>
-                <span id="targetStatusText" style="color: var(--accent-cyan);">MONITORING CROSS-TRAFFIC</span>
+        <!-- Center Column: True 3D Ego-Centric Perspective Viewport -->
+        <div class="glass-panel ego-viewport-panel">
+            <div id="ego3dContainer">
+                <div class="viewport-status-badge">
+                    <span style="color: var(--accent-green);">●</span>
+                    <span id="vpBadge">EGO-CENTRIC HORIZON VIEW (NO GOD-MODE)</span>
+                </div>
+
+                <div class="viewport-overlay-controls">
+                    <button class="btn-pov active" id="btnPovRoof" onclick="setEgoCamera('roof')">ROOF CHASE</button>
+                    <button class="btn-pov" id="btnPovCockpit" onclick="setEgoCamera('cockpit')">WINDSHIELD POV</button>
+                    <button class="btn-pov" id="btnPovBumper" onclick="setEgoCamera('bumper')">BUMPER LIDAR</button>
+                </div>
             </div>
 
-            <canvas id="corridorCanvas"></canvas>
+            <!-- Native Spherical Range View (LiDAR Sensor Matrix) -->
+            <div class="range-view-container">
+                <div class="range-header">
+                    <span>NATIVE SPHERICAL RANGE-VIEW (32 CHANNELS × 64 BEAMS)</span>
+                    <span style="color: var(--accent-cyan);">AZIMUTH [-60° .. +60°]</span>
+                </div>
+                <canvas id="rangeCanvas" width="256" height="64"></canvas>
+            </div>
         </div>
 
         <!-- Right Column: Capped MLS Clearance & Pedestrian Telemetry -->
         <div class="glass-panel">
             <div class="panel-header">
-                <span>CAPPED MLS CLEARANCE VALIDATION</span>
-                <span style="color: var(--accent-cyan);">UNDERPASS</span>
+                <span>LONGITUDINAL CLEARANCE PROFILE</span>
+                <span style="color: var(--accent-cyan);">CAPPED MLS</span>
             </div>
 
-            <div class="clearance-gauge">
-                <div class="clearance-row">
-                    <span style="color: var(--text-muted);">Vehicle Roof Height:</span>
-                    <strong>1.60 m</strong>
+            <!-- Longitudinal Clearance Cross Section Canvas -->
+            <div class="profile-container">
+                <div style="display: flex; justify-content: space-between; font-size: 11px; color: var(--text-muted);">
+                    <span>Vehicle Roof: 1.60m</span>
+                    <span>Safe Limit: 2.40m</span>
+                    <span style="color: var(--accent-cyan);">Ceiling: 3.20m</span>
                 </div>
-                <div class="clearance-row">
-                    <span style="color: var(--text-muted);">Mandatory Safety Ceiling:</span>
-                    <strong>2.40 m</strong>
-                </div>
-                <div class="clearance-row">
-                    <span style="color: var(--text-muted);">Measured Structure Elevation:</span>
-                    <strong id="measuredCeilingVal" style="color: var(--accent-cyan);">3.20 m</strong>
-                </div>
-
-                <div class="clearance-bar-container">
-                    <div class="clearance-bar-fill" id="clearanceBar"></div>
-                </div>
-
-                <div class="clearance-badge" id="clearanceBadge">
-                    SAFE PASS: +1.60m OVERHEAD CLEARANCE
+                <canvas id="profileCanvas" width="300" height="110"></canvas>
+                <div style="font-size: 11px; color: var(--accent-green); font-family: 'Orbitron'; font-weight: 700; margin-top: 4px; text-align: center;">
+                    SAFE UNDERPASS PASS: +1.60m HEADROOM
                 </div>
             </div>
 
-            <div class="panel-header" style="margin-top: 8px;">
+            <div class="panel-header" style="margin-top: 4px;">
                 <span>ACTIVE PEDESTRIAN TRACK (VRU)</span>
             </div>
 
             <div class="stat-grid">
                 <div class="stat-card">
                     <div class="stat-label">Track State</div>
-                    <div class="stat-val" id="pedStateVal" style="font-size: 15px; color: var(--accent-green);">CONFIRMED</div>
+                    <div class="stat-val" id="pedStateVal" style="font-size: 13px; color: var(--accent-green);">CONFIRMED</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-label">Crossing Speed</div>
                     <div class="stat-val" id="pedSpeedVal">1.2 m/s</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-label">Relative Offset (X, Y)</div>
-                    <div class="stat-val" id="pedOffsetVal" style="font-size: 14px;">+4.0m, +12.0m</div>
+                    <div class="stat-label">Lateral / Longit.</div>
+                    <div class="stat-val" id="pedOffsetVal" style="font-size: 12px;">+3.2m, +18.0m</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-label">Occlusion Coasting</div>
-                    <div class="stat-val" id="pedCoastVal" style="font-size: 14px; color: var(--accent-amber);">NOMINAL</div>
+                    <div class="stat-val" id="pedCoastVal" style="font-size: 12px; color: var(--accent-amber);">NOMINAL</div>
                 </div>
             </div>
 
-            <div class="panel-header" style="margin-top: 8px;">
+            <div class="panel-header" style="margin-top: 4px;">
                 <span>AUTONOMOUS PERCEPTION LOG</span>
             </div>
             <div class="log-box" id="logBox">
                 <div class="log-entry info">[SYS] Foveated MLS Engine v4.0 Online (20 Hz)</div>
                 <div class="log-entry info">[MLS] Capped intervals validated: Underpass 3.2m traversable</div>
                 <div class="log-entry">[AEB] Dynamic corridor initialized: W=3.5m, L=25.0m</div>
+                <div class="log-entry">[RADAR] Radial occlusion shadow cone active behind delivery van</div>
             </div>
         </div>
     </div>
 
     <script>
-        const canvas = document.getElementById('corridorCanvas');
-        const ctx = canvas.getContext('2d');
+        // -------------------------------------------------------------
+        // THREE.JS EGO-CENTRIC AUTOMOTIVE SCENE SETUP
+        // -------------------------------------------------------------
+        const container = document.getElementById('ego3dContainer');
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x02050a);
+        scene.fog = new THREE.FogExp2(0x02050a, 0.015);
 
-        function resizeCanvas() {
-            canvas.width = canvas.clientWidth;
-            canvas.height = canvas.clientHeight;
+        const camera = new THREE.PerspectiveCamera(55, container.clientWidth / container.clientHeight, 0.1, 200);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(container.clientWidth, container.clientHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.shadowMap.enabled = true;
+        container.appendChild(renderer.domElement);
+
+        window.addEventListener('resize', () => {
+            camera.aspect = container.clientWidth / container.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(container.clientWidth, container.clientHeight);
+        });
+
+        // Ambient & Directional Lighting
+        const hemiLight = new THREE.HemisphereLight(0x94a3b8, 0x0f172a, 0.6);
+        scene.add(hemiLight);
+
+        const dirLight = new THREE.DirectionalLight(0xe0f2fe, 1.2);
+        dirLight.position.set(20, 40, -10);
+        dirLight.castShadow = true;
+        scene.add(dirLight);
+
+        // 1. Two-Lane Asphalt Roadway with Curbs (100m long)
+        const roadGroup = new THREE.Group();
+        const roadMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.85 });
+        const road = new THREE.Mesh(new THREE.PlaneGeometry(8.0, 140.0), roadMat);
+        road.rotation.x = -Math.PI / 2;
+        road.position.set(0, 0, 30.0);
+        road.receiveShadow = true;
+        roadGroup.add(road);
+
+        // Dashed Lane Striping
+        const stripeGeo = new THREE.PlaneGeometry(0.18, 3.0);
+        const stripeMat = new THREE.MeshBasicMaterial({ color: 0x94a3b8 });
+        for (let z = -20; z <= 80; z += 6.0) {
+            const stripe = new THREE.Mesh(stripeGeo, stripeMat);
+            stripe.rotation.x = -Math.PI / 2;
+            stripe.position.set(0, 0.01, z);
+            roadGroup.add(stripe);
         }
-        window.addEventListener('resize', resizeCanvas);
-        resizeCanvas();
 
+        // 15cm Raised Curbs (Left & Right)
+        const curbMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.7 });
+        const curbL = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.15, 140.0), curbMat);
+        curbL.position.set(-4.25, 0.075, 30.0);
+        const curbR = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.15, 140.0), curbMat);
+        curbR.position.set(4.25, 0.075, 30.0);
+        roadGroup.add(curbL, curbR);
+
+        scene.add(roadGroup);
+
+        // 2. Concrete Underpass Structure (3.2m Clearance Ceiling at Z in [20m..35m])
+        const underpassGroup = new THREE.Group();
+        const concMat = new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.6 });
+        // Left & Right Pillars
+        const pillarL = new THREE.Mesh(new THREE.BoxGeometry(1.0, 3.6, 16.0), concMat);
+        pillarL.position.set(-4.8, 1.8, 27.5);
+        const pillarR = new THREE.Mesh(new THREE.BoxGeometry(1.0, 3.6, 16.0), concMat);
+        pillarR.position.set(4.8, 1.8, 27.5);
+        // Ceiling Deck (Z_low = 3.2m)
+        const ceiling = new THREE.Mesh(new THREE.BoxGeometry(10.6, 0.6, 16.0), concMat);
+        ceiling.position.set(0, 3.5, 27.5);
+        underpassGroup.add(pillarL, pillarR, ceiling);
+
+        // Clearance Portal Neon Wireframe Box
+        const portalWire = new THREE.BoxHelper(ceiling, 0x00e5ff);
+        underpassGroup.add(portalWire);
+        scene.add(underpassGroup);
+
+        // 3. Parked Delivery Van at Right Curb (Z = +12.0m, casting radial blind occlusion cone)
+        const vanGroup = new THREE.Group();
+        const vanBody = new THREE.Mesh(new THREE.BoxGeometry(2.0, 2.4, 4.8), new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.3 }));
+        vanBody.position.y = 1.2;
+        vanBody.castShadow = true;
+        vanGroup.add(vanBody);
+
+        // 3D Bounding Box around Delivery Van
+        const vanBox = new THREE.BoxHelper(vanBody, 0x00ff88);
+        vanGroup.add(vanBox);
+        vanGroup.position.set(2.8, 0, 12.0);
+        scene.add(vanGroup);
+
+        // Radial Occlusion Shadow Cone (Behind the parked van)
+        const shadowConeGeo = new THREE.BufferGeometry();
+        // A dark wedge on the asphalt extending into distance
+        const shadowVerts = new Float32Array([
+            1.8, 0.02, 14.4,
+            3.8, 0.02, 14.4,
+            6.0, 0.02, 45.0,
+            1.8, 0.02, 14.4,
+            6.0, 0.02, 45.0,
+            2.2, 0.02, 45.0
+        ]);
+        shadowConeGeo.setAttribute('position', new THREE.BufferAttribute(shadowVerts, 3));
+        const shadowConeMat = new THREE.MeshBasicMaterial({ color: 0x050b14, transparent: true, opacity: 0.85, side: THREE.DoubleSide });
+        const shadowConeMesh = new THREE.Mesh(shadowConeGeo, shadowConeMat);
+        scene.add(shadowConeMesh);
+
+        // 4. Crossing Pedestrian (VRU)
+        const pedGroup = new THREE.Group();
+        const pedTorso = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.22, 1.2, 12), new THREE.MeshStandardMaterial({ color: 0xff9100 }));
+        pedTorso.position.y = 0.7;
+        const pedHead = new THREE.Mesh(new THREE.SphereGeometry(0.18, 12, 12), new THREE.MeshStandardMaterial({ color: 0xffcc80 }));
+        pedHead.position.y = 1.45;
+        pedGroup.add(pedTorso, pedHead);
+
+        // 3D Bounding Box around Pedestrian
+        const pedBoxGeo = new THREE.BoxGeometry(0.6, 1.8, 0.6);
+        const pedBoxMat = new THREE.MeshBasicMaterial({ color: 0xff2233, wireframe: true });
+        const pedBoxMesh = new THREE.Mesh(pedBoxGeo, pedBoxMat);
+        pedBoxMesh.position.y = 0.9;
+        pedGroup.add(pedBoxMesh);
+
+        pedGroup.position.set(3.8, 0, 14.0);
+        scene.add(pedGroup);
+
+        // 5. Ego-Vehicle (Modern Electric Sedan)
+        const evGroup = new THREE.Group();
+        const evChassis = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.9, 4.4), new THREE.MeshStandardMaterial({ color: 0x0284c7, metalness: 0.6, roughness: 0.2 }));
+        evChassis.position.y = 0.55;
+        evChassis.castShadow = true;
+        evGroup.add(evChassis);
+
+        const evCabin = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.65, 2.2), new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.1, metalness: 0.9 }));
+        evCabin.position.set(0, 1.15, -0.2);
+        evGroup.add(evCabin);
+
+        // Roof-Mounted Automotive LiDAR Socket (+1.7m)
+        const lidarSocket = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.18, 16), new THREE.MeshStandardMaterial({ color: 0x00e5ff, emissive: 0x00e5ff, emissiveIntensity: 0.6 }));
+        lidarSocket.position.set(0, 1.6, 0.4);
+        evGroup.add(lidarSocket);
+
+        // Dynamic 3D Braking Corridor Carpet (W = 3.5m, L = 25m)
+        const corridorGeo = new THREE.PlaneGeometry(3.5, 25.0);
+        const corridorMat = new THREE.MeshBasicMaterial({ color: 0x00ff88, transparent: true, opacity: 0.35, side: THREE.DoubleSide });
+        const corridorMesh = new THREE.Mesh(corridorGeo, corridorMat);
+        corridorMesh.rotation.x = -Math.PI / 2;
+        corridorMesh.position.set(0, 0.04, 12.5);
+        evGroup.add(corridorMesh);
+
+        evGroup.position.set(0, 0, -5.0);
+        scene.add(evGroup);
+
+        // 6. Automotive Grazing-Angle LiDAR Laser Return Rings (Points on the road)
+        const lidarPointsGeo = new THREE.BufferGeometry();
+        const pointCount = 1200;
+        const positions = new Float32Array(pointCount * 3);
+        const colors = new Float32Array(pointCount * 3);
+
+        // Generate expanding grazing rings on the asphalt
+        let pIdx = 0;
+        for (let ring = 1; ring <= 24; ring++) {
+            // Distance expands non-linearly due to grazing angle: d = h / tan(pitch)
+            const dist = 1.8 * Math.pow(ring, 1.18);
+            const ptsInRing = Math.min(60, 10 + ring * 2);
+            for (let i = 0; i < ptsInRing && pIdx < pointCount; i++) {
+                const angle = (i / ptsInRing) * Math.PI * 0.9 - Math.PI * 0.45;
+                const px = Math.sin(angle) * dist;
+                const pz = Math.cos(angle) * dist;
+                const py = 0.02;
+
+                positions[pIdx * 3] = px;
+                positions[pIdx * 3 + 1] = py;
+                positions[pIdx * 3 + 2] = pz;
+
+                // Color by grazing range: near = cyan/green, far = dark blue
+                const rangeRatio = Math.min(1.0, dist / 60.0);
+                colors[pIdx * 3] = rangeRatio * 0.2;
+                colors[pIdx * 3 + 1] = (1.0 - rangeRatio) * 0.9;
+                colors[pIdx * 3 + 2] = 1.0;
+                pIdx++;
+            }
+        }
+        lidarPointsGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        lidarPointsGeo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+        const lidarPointsMat = new THREE.PointsMaterial({ size: 0.18, vertexColors: true, transparent: true, opacity: 0.85 });
+        const lidarPointsMesh = new THREE.Points(lidarPointsGeo, lidarPointsMat);
+        evGroup.add(lidarPointsMesh);
+
+        // -------------------------------------------------------------
+        // EGO-CENTRIC CAMERA MODES (NO GOD-MODE TOP-DOWN)
+        // -------------------------------------------------------------
+        let egoCameraMode = 'roof'; // 'roof', 'cockpit', 'bumper'
+
+        function setEgoCamera(mode) {
+            egoCameraMode = mode;
+            document.querySelectorAll('.btn-pov').forEach(b => b.classList.remove('active'));
+            if (mode === 'roof') document.getElementById('btnPovRoof').classList.add('active');
+            if (mode === 'cockpit') document.getElementById('btnPovCockpit').classList.add('active');
+            if (mode === 'bumper') document.getElementById('btnPovBumper').classList.add('active');
+        }
+
+        // -------------------------------------------------------------
+        // NATIVE SPHERICAL RANGE-VIEW IMAGE CANVAS (32 × 64 MATRIX)
+        // -------------------------------------------------------------
+        const rangeCanvas = document.getElementById('rangeCanvas');
+        const rangeCtx = rangeCanvas.getContext('2d');
+
+        function drawRangeView(pedX, aebActive, pedOccluded) {
+            const w = rangeCanvas.width;
+            const h = rangeCanvas.height;
+            rangeCtx.fillStyle = "#03060a";
+            rangeCtx.fillRect(0, 0, w, h);
+
+            const channels = 32;
+            const beams = 64;
+            const cellW = w / beams;
+            const cellH = h / channels;
+
+            for (let c = 0; c < channels; c++) {
+                // Pitch: c=0 is -25 deg (ground near bumper), c=31 is +15 deg (overhead/sky)
+                const pitchDeg = -25.0 + (40.0 * c / 31.0);
+
+                for (let b = 0; b < beams; b++) {
+                    const azimuthDeg = -60.0 + (120.0 * b / 63.0);
+                    let intensity = 0;
+                    let color = "#03060a";
+
+                    if (pitchDeg < -2.0) {
+                        // Ground returns (expanding grazing pattern)
+                        const range = -1.7 / Math.sin(pitchDeg * Math.PI / 180);
+                        if (range > 1.0 && range < 60.0) {
+                            const val = Math.max(20, Math.min(255, 255 - range * 3.5));
+                            color = `rgb(0, ${Math.floor(val * 0.7)}, ${Math.floor(val)})`;
+                        }
+                    } else if (pitchDeg > 4.0 && pitchDeg < 12.0 && Math.abs(azimuthDeg) < 22.0) {
+                        // Underpass ceiling deck slab
+                        color = "#00e5ff";
+                    }
+
+                    // Parked Delivery Van signature on the right (azimuth approx +10° to +25°)
+                    if (azimuthDeg > 8.0 && azimuthDeg < 24.0 && pitchDeg > -4.0 && pitchDeg < 5.0) {
+                        color = "#38bdf8"; // Van return
+                    }
+
+                    // Crossing Pedestrian signature (narrow vertical column)
+                    const pedAzimuth = (Math.atan2(pedX, 14.0 - evGroup.position.z) * 180 / Math.PI);
+                    if (!pedOccluded && Math.abs(azimuthDeg - pedAzimuth) < 2.5 && pitchDeg > -6.0 && pitchDeg < 2.0) {
+                        color = aebActive ? "#ff1744" : "#ff9100";
+                    }
+
+                    // Van Radial Occlusion Shadow (blacked out right behind the van)
+                    if (azimuthDeg > 12.0 && azimuthDeg < 30.0 && pitchDeg < -4.0) {
+                        color = "#020408"; // Shadow blind cone
+                    }
+
+                    rangeCtx.fillStyle = color;
+                    rangeCtx.fillRect(b * cellW, (channels - 1 - c) * cellH, cellW + 0.5, cellH + 0.5);
+                }
+            }
+        }
+
+        // -------------------------------------------------------------
+        // LONGITUDINAL ELEVATION PROFILE CANVAS (CAPPED MLS CROSS-SECTION)
+        // -------------------------------------------------------------
+        const profCanvas = document.getElementById('profileCanvas');
+        const profCtx = profCanvas.getContext('2d');
+
+        function drawLongitudinalProfile(evZ) {
+            const w = profCanvas.width;
+            const h = profCanvas.height;
+            profCtx.clearRect(0, 0, w, h);
+
+            const scaleX = w / 40.0; // 0 to 40 meters ahead
+            const scaleY = h / 4.5;  // 0 to 4.5 meters vertical elevation
+
+            // 1. Asphalt Road Ground Line (Z = 0.0m)
+            const groundY = h - (0.1 * scaleY);
+            profCtx.strokeStyle = "#475569";
+            profCtx.lineWidth = 2;
+            profCtx.beginPath();
+            profCtx.moveTo(0, groundY);
+            profCtx.lineTo(w, groundY);
+            profCtx.stroke();
+
+            // 2. Vehicle Roof Profile (H = 1.6m at X = 0..4.4m)
+            const evRoofY = h - (1.6 * scaleY);
+            profCtx.fillStyle = "rgba(2, 132, 199, 0.4)";
+            profCtx.strokeStyle = "#38bdf8";
+            profCtx.lineWidth = 1.5;
+            profCtx.fillRect(20, evRoofY, 4.4 * scaleX, 1.6 * scaleY);
+            profCtx.strokeRect(20, evRoofY, 4.4 * scaleX, 1.6 * scaleY);
+
+            profCtx.fillStyle = "#38bdf8";
+            profCtx.font = "9px Orbitron";
+            profCtx.fillText("EV (1.6m)", 22, evRoofY - 4);
+
+            // 3. Mandatory Clearance Line (2.4m Safe Buffer)
+            const safeY = h - (2.4 * scaleY);
+            profCtx.strokeStyle = "rgba(255, 145, 0, 0.6)";
+            profCtx.setLineDash([4, 4]);
+            profCtx.beginPath();
+            profCtx.moveTo(0, safeY);
+            profCtx.lineTo(w, safeY);
+            profCtx.stroke();
+            profCtx.setLineDash([]);
+            profCtx.fillStyle = "rgba(255, 145, 0, 0.8)";
+            profCtx.fillText("2.4m SAFE CLEARANCE THRESHOLD", 70, safeY - 3);
+
+            // 4. Concrete Underpass Structure (Z_low = 3.2m, Z_high = 3.8m at Dist = 22m..37m)
+            const underpassStart = (22.0 - evZ) * scaleX;
+            const underpassEnd = (37.0 - evZ) * scaleX;
+            const ceilY = h - (3.2 * scaleY);
+            const deckY = h - (3.8 * scaleY);
+
+            if (underpassStart < w) {
+                profCtx.fillStyle = "rgba(0, 229, 255, 0.25)";
+                profCtx.strokeStyle = "#00e5ff";
+                profCtx.fillRect(underpassStart, deckY, Math.max(20, underpassEnd - underpassStart), ceilY - deckY);
+                profCtx.strokeRect(underpassStart, deckY, Math.max(20, underpassEnd - underpassStart), ceilY - deckY);
+
+                // Vertical Gap Arrow showing +1.60m Headroom
+                profCtx.strokeStyle = "#00ff88";
+                profCtx.lineWidth = 2;
+                profCtx.beginPath();
+                const arrowX = underpassStart + 20;
+                profCtx.moveTo(arrowX, groundY);
+                profCtx.lineTo(arrowX, ceilY);
+                profCtx.stroke();
+
+                profCtx.fillStyle = "#00ff88";
+                profCtx.fillText("ΔZ = 3.2m (SAFE)", arrowX + 4, (groundY + ceilY) / 2);
+            }
+        }
+
+        // -------------------------------------------------------------
+        // ANIMATION & LIVE PERCEPTION LOOP
+        // -------------------------------------------------------------
+        let simTime = 0;
         let civilianState = {
             speed_kmh: 36.0,
             speed_mps: 10.0,
             aeb_status: "CRUISE_NOMINAL",
             ttc_s: 99.9,
-            overhead_clearance_m: 3.2,
-            clearance_safe: true,
             corridor_length_m: 25.0,
-            corridor_width_m: 3.5,
-            ego_pose: { x: 0.0, y: -20.0, pitch: 0.0 },
+            ego_pose: { x: 0.0, y: -5.0, pitch: 0.0 },
             pedestrian_tracks: []
         };
 
-        // Render Dynamic Corridor Radar
-        function renderRadar() {
-            const w = canvas.width;
-            const h = canvas.height;
-            ctx.clearRect(0, 0, w, h);
+        function animate() {
+            requestAnimationFrame(animate);
+            simTime += 0.05;
 
-            const cx = w / 2;
-            const cy = h - 100; // EV positioned near bottom
-            const scale = 7.0;  // Pixels per meter
+            // Pedestrian Trajectory (Crossing from Right Curb X=3.8m across to X=-3.0m)
+            let pedX = 3.8 - ((simTime * 1.5) % 7.6);
+            pedGroup.position.set(pedX, 0, 14.0);
 
-            // 1. Draw Asphalt Road & Curbs (W = 7.0m, +/-3.5m)
-            const roadHalfW = 3.5 * scale;
-            ctx.fillStyle = "#0c131d";
-            ctx.fillRect(cx - roadHalfW, 0, roadHalfW * 2, h);
+            // Occlusion Check behind Delivery Van (at X=2.8, Z=12.0)
+            const pedOccluded = (pedX > 2.0 && evGroup.position.z < 8.0);
+            pedGroup.visible = !pedOccluded;
 
-            // Left Curb (15cm raised)
-            ctx.fillStyle = "#334155";
-            ctx.fillRect(cx - roadHalfW - 12, 0, 12, h);
-            // Right Curb
-            ctx.fillRect(cx + roadHalfW, 0, 12, h);
+            // Longitudinal Distance from EV to Pedestrian
+            const distToPed = 14.0 - evGroup.position.z;
+            const inLongitudinal = (distToPed > 0.5 && distToPed < civilianState.corridor_length_m);
+            const inLateral = Math.abs(pedX) < 1.75;
+            const aebTriggered = (inLongitudinal && inLateral && !pedOccluded);
 
-            // Road Lane Dashes
-            ctx.strokeStyle = "rgba(255, 255, 255, 0.25)";
-            ctx.setLineDash([20, 20]);
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.moveTo(cx, 0);
-            ctx.lineTo(cx, h);
-            ctx.stroke();
-            ctx.setLineDash([]);
+            // Update Vehicle Kinematics
+            if (aebTriggered) {
+                corridorMat.color.setHex(0xff1744); // Red emergency brake
+                pedBoxMat.color.setHex(0xff1744);
+                evGroup.rotation.x = -0.04; // Nose down pitch (-2.5 deg)
+                civilianState.speed_kmh = Math.max(0, civilianState.speed_kmh - 8.0);
+                civilianState.aeb_status = "EMERGENCY_BRAKING_ACTIVE";
+                civilianState.ttc_s = Math.max(0.2, distToPed / Math.max(civilianState.speed_mps, 0.5));
+            } else {
+                corridorMat.color.setHex(0x00ff88); // Green nominal cruise
+                pedBoxMat.color.setHex(0xff9100);
+                evGroup.rotation.x = 0.0;
+                civilianState.speed_kmh = Math.min(36.0, civilianState.speed_kmh + 2.0);
+                civilianState.aeb_status = "CRUISE_NOMINAL";
+                civilianState.ttc_s = 99.9;
 
-            // 2. Draw Parked Delivery Van at Right Curb (X = +2.6m, Y = +25m ahead)
-            const vanX = cx + 2.6 * scale;
-            const vanY = cy - 25 * scale;
-            const vanW = 1.8 * scale;
-            const vanL = 4.8 * scale;
+                // Move forward along the road
+                evGroup.position.z += 0.12 * (civilianState.speed_kmh / 36.0);
+                if (evGroup.position.z > 35.0) evGroup.position.z = -25.0; // Loop proving ground
+            }
+            civilianState.speed_mps = civilianState.speed_kmh / 3.6;
 
-            // Van Shadow Cone (Blind Zone behind the van)
-            ctx.fillStyle = "rgba(100, 116, 139, 0.25)";
-            ctx.beginPath();
-            ctx.moveTo(cx, cy);
-            ctx.lineTo(vanX - vanW / 2, vanY - vanL / 2);
-            ctx.lineTo(vanX + vanW, vanY - vanL * 2);
-            ctx.lineTo(vanX + vanW, vanY + vanL);
-            ctx.closePath();
-            ctx.fill();
-
-            // Van Body
-            ctx.fillStyle = "#475569";
-            ctx.strokeStyle = "#94a3b8";
-            ctx.lineWidth = 1.5;
-            ctx.fillRect(vanX - vanW / 2, vanY - vanL / 2, vanW, vanL);
-            ctx.strokeRect(vanX - vanW / 2, vanY - vanL / 2, vanW, vanL);
-
-            ctx.fillStyle = "#cbd5e1";
-            ctx.font = "10px Orbitron";
-            ctx.fillText("PARKED VAN (OCCLUSION)", vanX - vanW / 2, vanY - vanL / 2 - 6);
-
-            // 3. Draw Dynamic Braking Corridor (W = 3.5m, L = corridor_length_m)
-            const corW = civilianState.corridor_width_m * scale;
-            const corL = civilianState.corridor_length_m * scale;
-            const isBraking = civilianState.aeb_status.includes("BRAKING");
-
-            ctx.fillStyle = isBraking ? "rgba(255, 23, 68, 0.35)" : "rgba(0, 255, 136, 0.15)";
-            ctx.strokeStyle = isBraking ? "#ff1744" : "#00ff88";
-            ctx.lineWidth = 2;
-
-            ctx.fillRect(cx - corW / 2, cy - corL, corW, corL);
-            ctx.strokeRect(cx - corW / 2, cy - corL, corW, corL);
-
-            // Dynamic Corridor Dimension Label
-            ctx.fillStyle = isBraking ? "#ff1744" : "#00ff88";
-            ctx.font = "11px Orbitron";
-            ctx.fillText(`DYNAMIC BRAKING CORRIDOR [L = ${civilianState.corridor_length_m.toFixed(1)}m]`, cx - corW / 2 + 6, cy - corL + 18);
-
-            // 4. Draw Ego EV Sedan at (cx, cy)
-            const evW = 1.8 * scale;
-            const evL = 4.4 * scale;
-            ctx.fillStyle = "#0284c7";
-            ctx.strokeStyle = "#38bdf8";
-            ctx.lineWidth = 2;
-            ctx.fillRect(cx - evW / 2, cy - evL / 2, evW, evL);
-            ctx.strokeRect(cx - evW / 2, cy - evL / 2, evW, evL);
-
-            // Roof LiDAR Socket
-            ctx.fillStyle = "#00e5ff";
-            ctx.beginPath();
-            ctx.arc(cx, cy, 5, 0, Math.PI * 2);
-            ctx.fill();
-
-            // 5. Draw Pedestrian Target & Predicted Velocity Vector
-            let pedX = cx + 3.2 * scale;
-            let pedY = cy - 18 * scale;
-            let pedVx = -1.2;
-
-            if (civilianState.pedestrian_tracks.length > 0) {
-                const trk = civilianState.pedestrian_tracks[0];
-                pedX = cx + (trk.x - civilianState.ego_pose.x) * scale;
-                pedY = cy - (trk.y - civilianState.ego_pose.y) * scale;
-                pedVx = trk.vx || -1.2;
+            // ---------------------------------------------------------
+            // STRICTLY EGO-CENTRIC CAMERA POSITIONS (NO GOD-MODE TOP-DOWN)
+            // ---------------------------------------------------------
+            if (egoCameraMode === 'roof') {
+                // Third-person chase cam mounted 2.2m high and 6.0m behind the vehicle roof
+                camera.position.set(evGroup.position.x, 2.2, evGroup.position.z - 6.0);
+                camera.lookAt(evGroup.position.x, 1.4, evGroup.position.z + 25.0);
+            } else if (egoCameraMode === 'cockpit') {
+                // Driver windshield perspective at eye level inside the cabin
+                camera.position.set(evGroup.position.x - 0.35, 1.3, evGroup.position.z + 0.2);
+                camera.lookAt(evGroup.position.x - 0.35, 1.3, evGroup.position.z + 35.0);
+            } else if (egoCameraMode === 'bumper') {
+                // Front bumper low-grazing sensor view at +0.5m
+                camera.position.set(evGroup.position.x, 0.5, evGroup.position.z + 2.3);
+                camera.lookAt(evGroup.position.x, 0.5, evGroup.position.z + 30.0);
             }
 
-            // Pedestrian Marker (Orange/Red dot)
-            ctx.fillStyle = isBraking ? "#ff1744" : "#ff9100";
-            ctx.beginPath();
-            ctx.arc(pedX, pedY, 7, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.strokeStyle = "#fff";
-            ctx.stroke();
+            renderer.render(scene, camera);
 
-            // Velocity Vector Arrow
-            ctx.strokeStyle = "#ff1744";
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.moveTo(pedX, pedY);
-            ctx.lineTo(pedX + pedVx * scale * 4, pedY);
-            ctx.stroke();
+            // Draw Real-Time Range-View and Longitudinal Cross-Section
+            drawRangeView(pedX, aebTriggered, pedOccluded);
+            drawLongitudinalProfile(evGroup.position.z);
 
-            ctx.fillStyle = "#fff";
-            ctx.font = "11px Inter";
-            ctx.fillText(`PEDESTRIAN (TTC: ${civilianState.ttc_s.toFixed(1)}s)`, pedX + 12, pedY - 4);
-
-            requestAnimationFrame(renderRadar);
-        }
-        renderRadar();
-
-        // Telemetry Polling Loop (20 Hz)
-        async function fetchState() {
-            try {
-                const res = await fetch('/api/civilian_state');
-                if (res.ok) {
-                    civilianState = await res.json();
-                    updateUI();
-                }
-            } catch (e) {
-                // Simulation offline fallback
-            }
+            // Update UI Cockpit Elements
+            updateCockpitUI(pedX, pedOccluded, aebTriggered);
         }
 
-        function updateUI() {
-            // Update Speedometer
+        function updateCockpitUI(pedX, pedOccluded, aebTriggered) {
             document.getElementById('speedText').innerText = Math.round(civilianState.speed_kmh);
-            document.getElementById('pitchVal').innerText = (civilianState.ego_pose.pitch >= 0 ? "+" : "") + civilianState.ego_pose.pitch.toFixed(1) + "°";
-            document.getElementById('lookaheadVal').innerText = civilianState.corridor_length_m.toFixed(1) + " m";
-            document.getElementById('ttcVal').innerText = civilianState.ttc_s < 50 ? civilianState.ttc_s.toFixed(1) + " s" : "> 5.0 s";
+            document.getElementById('pitchVal').innerText = (evGroup.rotation.x < 0 ? "-2.5°" : "+0.0°");
+            document.getElementById('ttcVal').innerText = aebTriggered ? `${civilianState.ttc_s.toFixed(1)} s` : "> 5.0 s";
 
-            // AEB Banner
             const banner = document.getElementById('aebBanner');
             const title = document.getElementById('aebTitle');
             const desc = document.getElementById('aebDesc');
-            const isBraking = civilianState.aeb_status.includes("BRAKING");
 
-            if (isBraking) {
+            if (aebTriggered) {
                 banner.className = "aeb-alert-banner danger";
-                title.innerText = "EMERGENCY BRAKE ACTIVE";
-                desc.innerText = `Pedestrian Crossing Corridor (TTC = ${civilianState.ttc_s.toFixed(1)}s <= 1.8s)`;
+                title.innerText = "EMERGENCY BRAKING ACTIVE";
+                desc.innerText = `Pedestrian Crossing In Path (TTC = ${civilianState.ttc_s.toFixed(1)}s <= 1.8s)`;
             } else {
                 banner.className = "aeb-alert-banner";
                 title.innerText = "CRUISE NOMINAL";
                 desc.innerText = "Dynamic Braking Corridor Clear";
             }
 
-            // Pedestrian Tracking
-            if (civilianState.pedestrian_tracks.length > 0) {
-                const t = civilianState.pedestrian_tracks[0];
-                document.getElementById('pedStateVal').innerText = t.state;
-                document.getElementById('pedSpeedVal').innerText = Math.abs(t.vx).toFixed(1) + " m/s";
-                document.getElementById('pedOffsetVal').innerText = `${t.x >= 0 ? "+" : ""}${t.x.toFixed(1)}m, ${t.y >= 0 ? "+" : ""}${t.y.toFixed(1)}m`;
-                document.getElementById('pedCoastVal').innerText = t.state === "COASTING" ? "COASTING (OCCLUDED)" : "LINE OF SIGHT";
-            }
+            document.getElementById('pedStateVal').innerText = pedOccluded ? "COASTING" : "CONFIRMED";
+            document.getElementById('pedStateVal').style.color = pedOccluded ? "#ffaa00" : "#00ff88";
+            document.getElementById('pedCoastVal').innerText = pedOccluded ? "BEHIND DELIVERY VAN" : "LINE OF SIGHT";
+            document.getElementById('pedCoastVal').style.color = pedOccluded ? "#ffaa00" : "#00ff88";
+            document.getElementById('pedOffsetVal').innerText = `${pedX >= 0 ? "+" : ""}${pedX.toFixed(1)}m, ${(14.0 - evGroup.position.z).toFixed(1)}m`;
         }
 
-        setInterval(fetchState, 50); // 20 Hz
+        animate();
     </script>
 </body>
 </html>
