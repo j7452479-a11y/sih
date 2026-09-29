@@ -203,6 +203,17 @@ The codebase supports two distinct high-fidelity operational configurations:
 - **Airborne Reconnaissance:** UAV orbits in a circular trajectory ($R=32\text{ m}$, $+30\text{ m}$ AGL, speed $8\text{ m/s}$) continuously scanning the perimeter with a 32-channel nadir LiDAR.
 - **Tethered Rover Infiltration:** An agile UGV tethered to a mother vehicle navigates an elliptical path ($A=26\text{ m}, B=16\text{ m}$) under a $4.5\text{ m}$ clearance bridge. Catenary cable physics are computed in real time.
 - **Occlusion Stress Testing:** Dynamic hostiles maneuver in the village. When hostile combatants duck behind a $2.2\text{ m}$ stone wall, direct line-of-sight is severed. The tracker transitions into **Occlusion Coasting**, holding kinematic lock for 200 consecutive frames ($10.0\text{ s}$).
+
+<p align="center">
+  <img src="docs/images/unity_first_person_hud.png" alt="Unity 6 First Person Tactical Visor HUD" width="100%">
+  <br><em>Figure 3.1: Unity 6 Soldier First-Person Tactical HUD with 4 concentric foveation tiers, 20 Hz kinematic telemetry, underpass bridge void, and MIL-STD-2525 diamond targeting brackets with range and speed readouts.</em>
+</p>
+
+<p align="center">
+  <img src="docs/images/uav_aerial_chase_hud.png" alt="UAV Aerial Chase HUD with Catenary Tether" width="100%">
+  <br><em>Figure 3.2: 32-Channel Nadir LiDAR UAV Aerial Chase view (+30m AGL) featuring dynamic catenary cable tether tracking (31.87m high tension) and PiP belly gimbal sensor feed.</em>
+</p>
+
 - **Launch Command:**
   ```bash
   python simulate_flight_and_math.py
@@ -217,6 +228,12 @@ The codebase supports two distinct high-fidelity operational configurations:
 - **Asymmetric Sensor Physics:** Replaces top-down aerial views with ego-centric horizon perception. Front-bumper solid-state LiDAR ($Z=0.5\text{ m}$) and roof long-range LiDAR ($Z=1.8\text{ m}$, 120° FOV, 200m range).
 - **Asphalt Grazing Reflections:** Accurately models non-linear hyperbolic point distributions caused by shallow grazing angles ($\theta_{\text{inc}} \ge 88^\circ$).
 - **Pedestrian Safety & Collision Avoidance:** Simulates urban crosswalk scenarios with dynamic pedestrian crossings. Calculates Time-to-Collision (TTC) and triggers emergency autonomous braking (AEB).
+
+<p align="center">
+  <img src="docs/images/civilian_ev_dashboard.png" alt="Civilian Autonomous EV Cockpit Dashboard" width="100%">
+  <br><em>Figure 3.3: Civilian Autonomous EV Cockpit Instrument Cluster (36 km/h nominal cruise) showing Longitudinal Capped MLS underpass headroom profile (+1.60m safe pass) and active pedestrian occlusion tracking behind delivery van.</em>
+</p>
+
 - **Launch Command:**
   ```bash
   python simulate_civilian_ev.py
@@ -308,6 +325,16 @@ The system features synchronized rendering across distributed displays and endpo
 | **Soldier AR Visor HUD** | Unity Screen 2 / Eyepiece | AR Tactical Smart Glasses | First-person targeting brackets, range/velocity readouts, projected green road corridor |
 | **3D Proving Ground Sim** | `http://localhost:8000/sim` | WebGL Browser | Interactive 3D village visualization with real-time drone and rover kinematics |
 | **Civilian EV Dashboard** | `http://localhost:8000/civilian` | In-Cabin Center Display | Dual-horizon LiDAR stream, crosswalk pedestrian detection, AEB emergency brake telemetry |
+
+<p align="center">
+  <img src="docs/images/commander_c2_radar.png" alt="Commander C2 Desktop Web Radar Station" width="100%">
+  <br><em>Figure 6.1: Commander C2 Desktop Web Radar Station operating at 19.7 FPS with 3.03 ms latency across 351,922 active spatial cells. Features real-time building dimensioning, UWB radar penetration, and tracked combatant kinematic vectors.</em>
+</p>
+
+<p align="center">
+  <img src="docs/images/soldier_visor_hud.png" alt="Soldier Tactical AR Visor HUD" width="100%">
+  <br><em>Figure 6.2: Soldier AR Visor HUD displaying an active 50m Weapons Engagement Zone alert, 5.2m traversable underpass corridor projection, and occluded Target 4 Delta coasting lock with PiP UAV feed.</em>
+</p>
 
 ---
 

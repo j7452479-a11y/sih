@@ -287,11 +287,17 @@ Tier 4: [60-100m] -> 0.50m res</div>
         <div class="card">
           <h3>Airborne UAV Reconnaissance</h3>
           <p>Circular flight orbit ($R=32\text{ m}$, $+30\text{ m}$ altitude) with 32-channel nadir LiDAR. Ingests roof and wall point clouds over UDP port 5001.</p>
+          <div class="diagram-container">
+            <img src="images/uav_aerial_chase_hud.png" alt="UAV Aerial Chase HUD">
+          </div>
           <div class="code-block">python simulate_flight_and_math.py</div>
         </div>
         <div class="card">
           <h3>Tethered UGV Underpass Rover</h3>
           <p>Elliptical underpass infiltration ($A=26\text{ m}, B=16\text{ m}$) with 16-channel horizontal LiDAR beneath the bridge void. Streamed over UDP port 5002.</p>
+          <div class="diagram-container">
+            <img src="images/unity_first_person_hud.png" alt="Unity First Person Visor HUD">
+          </div>
           <span class="stat-pill green">Catenary Cable Physics (14m-20m)</span>
         </div>
       </div>
@@ -304,6 +310,14 @@ Tier 4: [60-100m] -> 0.50m res</div>
         <p>Ground ego-centric LiDAR perception with roof-mounted long-range scanner (120° FOV, 200m range) and front bumper near-field scanner. Incorporates grazing-angle road reflections and crosswalk AEB collision avoidance.</p>
         <div class="diagram-container">
           <img src="images/automotive_ev_lidar.svg" alt="Automotive EV LiDAR Geometry">
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom: 25px;">
+        <h3>Autonomous EV Cockpit Instrument Cluster (Running Live Output)</h3>
+        <p>Live 20 Hz telemetry showing longitudinal capped MLS underpass profile (+1.60m safe pass) and active pedestrian occlusion tracking.</p>
+        <div class="diagram-container">
+          <img src="images/civilian_ev_dashboard.png" alt="Civilian EV Dashboard Live Output">
         </div>
       </div>
 
@@ -400,6 +414,24 @@ if TTC < TTC_THRESHOLD (1.5s):
           <h3>🎖️ Defense Standards Compliance</h3>
           <p><strong>MIL-STD-2525D Symbology:</strong> Generates standardized diamond targeting brackets for hostiles (<code>a-h-G-U-C</code>) and circles for friendlies (<code>s-f-G-U-C</code>).</p>
           <p><strong>Cursor-on-Target (CoT):</strong> REST endpoint <code>/api/cot</code> emits standardized defense XML formatted with WGS-84 ellipsoidal geodesy for ATAK and WinTAK integration.</p>
+        </div>
+      </div>
+
+      <div class="grid-2" style="margin-top: 20px;">
+        <div class="card">
+          <h3>Commander C2 Desktop Web Radar (Live 20 Hz Feed)</h3>
+          <p>Real-time 19.7 FPS, 3.03 ms latency top-down operational picture with foveated range rings and tracked hostile vectors.</p>
+          <div class="diagram-container">
+            <img src="images/commander_c2_radar.png" alt="Commander C2 Web Radar Station">
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>Soldier Tactical AR Visor HUD</h3>
+          <p>Direct line-of-sight heads-up reticles with 50m Weapons Danger Zone alert and projected 5.2m traversable underpass corridor carpet.</p>
+          <div class="diagram-container">
+            <img src="images/soldier_visor_hud.png" alt="Soldier Tactical AR Visor HUD">
+          </div>
         </div>
       </div>
     </div>
