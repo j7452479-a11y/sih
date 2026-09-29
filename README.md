@@ -205,13 +205,23 @@ The codebase supports two distinct high-fidelity operational configurations:
 - **Occlusion Stress Testing:** Dynamic hostiles maneuver in the village. When hostile combatants duck behind a $2.2\text{ m}$ stone wall, direct line-of-sight is severed. The tracker transitions into **Occlusion Coasting**, holding kinematic lock for 200 consecutive frames ($10.0\text{ s}$).
 
 <p align="center">
+  <img src="docs/images/unity_commander_overview.png" alt="Commander Tactical Overview of Village Proving Ground" width="100%">
+  <br><em>Figure 3.1: Unity 6 Proving Ground — Commander Tactical Overview (POV 4) showing the 100m × 100m village, central bridge overpass, airborne UAV orbit, tethered UGV rover, and hostile combatants with both Line-of-Sight (LOS) locks (red) and Occluded Coasting tracks (yellow).</em>
+</p>
+
+<p align="center">
+  <img src="docs/images/unity_soldier_wall_occlusion.png" alt="Soldier AR Visor Stone Wall Occlusion" width="100%">
+  <br><em>Figure 3.2: Unity 6 Soldier First-Person Visor (POV 1) verifying real-time behind-wall occlusion. Even with combatants hidden behind the 2.2m stone wall, the Kalman tracker maintains predictive coasting locks.</em>
+</p>
+
+<p align="center">
   <img src="docs/images/unity_first_person_hud.png" alt="Unity 6 First Person Tactical Visor HUD" width="100%">
-  <br><em>Figure 3.1: Unity 6 Soldier First-Person Tactical HUD with 4 concentric foveation tiers, 20 Hz kinematic telemetry, underpass bridge void, and MIL-STD-2525 diamond targeting brackets with range and speed readouts.</em>
+  <br><em>Figure 3.3: First-Person Tactical Visor HUD displaying 4 concentric foveation tiers, 20 Hz kinematic telemetry, underpass bridge void, and dynamic diamond targeting brackets.</em>
 </p>
 
 <p align="center">
   <img src="docs/images/uav_aerial_chase_hud.png" alt="UAV Aerial Chase HUD with Catenary Tether" width="100%">
-  <br><em>Figure 3.2: 32-Channel Nadir LiDAR UAV Aerial Chase view (+30m AGL) featuring dynamic catenary cable tether tracking (31.87m high tension) and PiP belly gimbal sensor feed.</em>
+  <br><em>Figure 3.4: 32-Channel Nadir LiDAR UAV Aerial Chase view (+30m AGL) featuring dynamic catenary cable tether tracking (31.87m high tension) and PiP belly gimbal sensor feed.</em>
 </p>
 
 - **Launch Command:**
@@ -230,8 +240,13 @@ The codebase supports two distinct high-fidelity operational configurations:
 - **Pedestrian Safety & Collision Avoidance:** Simulates urban crosswalk scenarios with dynamic pedestrian crossings. Calculates Time-to-Collision (TTC) and triggers emergency autonomous braking (AEB).
 
 <p align="center">
+  <img src="docs/images/unity_civilian_ev_chase.png" alt="Civilian Autonomous EV Approaching Crosswalk in Unity 6" width="100%">
+  <br><em>Figure 3.5: Unity 6 Civilian EV Simulation — Ego-vehicle cruising at 36 km/h approaching the pedestrian crosswalk and underpass bridge with dual-horizon LiDAR raycasting.</em>
+</p>
+
+<p align="center">
   <img src="docs/images/civilian_ev_dashboard.png" alt="Civilian Autonomous EV Cockpit Dashboard" width="100%">
-  <br><em>Figure 3.3: Civilian Autonomous EV Cockpit Instrument Cluster (36 km/h nominal cruise) showing Longitudinal Capped MLS underpass headroom profile (+1.60m safe pass) and active pedestrian occlusion tracking behind delivery van.</em>
+  <br><em>Figure 3.6: Civilian Autonomous EV Cockpit Instrument Cluster (36 km/h nominal cruise) showing Longitudinal Capped MLS underpass headroom profile (+1.60m safe pass) and active pedestrian occlusion tracking behind delivery van.</em>
 </p>
 
 - **Launch Command:**
@@ -335,6 +350,18 @@ The system features synchronized rendering across distributed displays and endpo
   <img src="docs/images/soldier_visor_hud.png" alt="Soldier Tactical AR Visor HUD" width="100%">
   <br><em>Figure 6.2: Soldier AR Visor HUD displaying an active 50m Weapons Engagement Zone alert, 5.2m traversable underpass corridor projection, and occluded Target 4 Delta coasting lock with PiP UAV feed.</em>
 </p>
+
+### ⏱️ Real-Time Execution Proof & Hardware Watchdog Safe-Stop
+
+To verify that Project F.L.A.R.E. executes in **true real-time synchronization** with the physics simulation—rather than replaying pre-recorded telemetry—the pipeline features an active **250ms Heartbeat Watchdog** (`c2_interface/watchdog.py`) communicating over UDP port 5005:
+
+<p align="center">
+  <img src="docs/images/watchdog_simulation_paused_safestop.png" alt="Hardware Watchdog Simulation Paused Safe Stop Alert" width="100%">
+  <br><em>Figure 6.3: Conclusive proof of real-time coupling — When the Unity simulation is paused, the master heartbeat drops (&gt;250ms). The perception engine immediately triggers a Hardware Safe-Stop, clamps actuators to 0 km/h, applies emergency brakes (recording suspension pitch dive to -2.5°), and broadcasts a critical safety modal across all connected C2 client interfaces.</em>
+</p>
+
+- **Live Dynamic Coupling:** In nominal flight/drive, point clouds are streamed, partitioned into 4 foveated tiers, and tracked in $<10\text{ ms}$ at $20\text{ Hz}$.
+- **Fail-Safe Integrity:** The moment the Unity simulator pauses or drops below the 250ms timeout threshold, the perception engine instantly halts actuation to prevent vehicle runaway, proving that all algorithmic outputs are computed dynamically in real time.
 
 ---
 

@@ -285,6 +285,24 @@ Tier 4: [60-100m] -> 0.50m res</div>
 
       <div class="grid-2">
         <div class="card">
+          <h3>Commander Tactical Proving Ground Overview</h3>
+          <p>Isometric tactical perspective showing central bridge, overpass deck, drone orbit, tethered rover, and tracked hostiles with Line-of-Sight and Occlusion tags.</p>
+          <div class="diagram-container">
+            <img src="images/unity_commander_overview.png" alt="Commander Tactical Overview">
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>Behind-Wall Occlusion Verification</h3>
+          <p>Soldier first-person view demonstrating zero-swap Kalman tracking coasting even when combatants duck behind the 2.2m stone wall.</p>
+          <div class="diagram-container">
+            <img src="images/unity_soldier_wall_occlusion.png" alt="Soldier Behind Wall Occlusion">
+          </div>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
           <h3>Airborne UAV Reconnaissance</h3>
           <p>Circular flight orbit ($R=32\text{ m}$, $+30\text{ m}$ altitude) with 32-channel nadir LiDAR. Ingests roof and wall point clouds over UDP port 5001.</p>
           <div class="diagram-container">
@@ -313,11 +331,29 @@ Tier 4: [60-100m] -> 0.50m res</div>
         </div>
       </div>
 
-      <div class="card" style="margin-bottom: 25px;">
-        <h3>Autonomous EV Cockpit Instrument Cluster (Running Live Output)</h3>
-        <p>Live 20 Hz telemetry showing longitudinal capped MLS underpass profile (+1.60m safe pass) and active pedestrian occlusion tracking.</p>
+      <div class="grid-2">
+        <div class="card">
+          <h3>Unity 6 Autonomous EV Simulation</h3>
+          <p>Ego-vehicle approaching pedestrian crosswalk and underpass bridge with dual-horizon LiDAR raycasting.</p>
+          <div class="diagram-container">
+            <img src="images/unity_civilian_ev_chase.png" alt="Unity Civilian EV Crosswalk Chase">
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>Autonomous EV Cockpit Instrument Cluster</h3>
+          <p>Live 20 Hz telemetry showing longitudinal capped MLS underpass profile (+1.60m safe pass) and active pedestrian occlusion tracking.</p>
+          <div class="diagram-container">
+            <img src="images/civilian_ev_dashboard.png" alt="Civilian EV Dashboard Live Output">
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom: 25px; border-color: var(--accent-red);">
+        <h3 style="color: var(--accent-red);">⏱️ Real-Time Proof: Hardware Watchdog Safe-Stop</h3>
+        <p>Conclusive proof of live real-time execution: When Unity is paused, heartbeat timeout (&gt;250ms) triggers an immediate actuator freeze, locking velocity to 0 km/h and deploying safety braking.</p>
         <div class="diagram-container">
-          <img src="images/civilian_ev_dashboard.png" alt="Civilian EV Dashboard Live Output">
+          <img src="images/watchdog_simulation_paused_safestop.png" alt="Hardware Watchdog Simulation Paused Safe Stop">
         </div>
       </div>
 
