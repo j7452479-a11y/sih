@@ -29,6 +29,9 @@ namespace SIH.Perception
     public class TelemetryPayload
     {
         public double timestamp;
+        public string status;
+        public bool simulation_paused;
+        public bool emergency_stop;
         public List<TargetData> targets;
         public string designated_structure;
         public float[] uav_pose;
@@ -76,7 +79,10 @@ namespace SIH.Perception
 
             try
             {
-                listener = new UdpClient(listenPort);
+                var client = new UdpClient();
+                client.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
+                client.Client.Bind(new IPEndPoint(IPAddress.Any, listenPort));
+                listener = client;
                 groupEP = new IPEndPoint(IPAddress.Any, listenPort);
                 listener.BeginReceive(new AsyncCallback(ReceiveCallback), null);
             }
@@ -171,8 +177,20 @@ namespace SIH.Perception
             GUI.Label(new Rect(bannerRect.x + 12, bannerRect.y + 6, bannerRect.width - 24, 18), $"MUM-T TACTICAL HUD | {modeTitle}", headerStyle);
 
             bool isLive = (Time.time - lastPacketTime) < 1.0f;
-            string netStatus = isLive ? "LIVE UDP (Port 5003)" : "AUTONOMOUS SIM SENSORS";
-            Color netColor = isLive ? greenHudColor : cyanHudColor;
+            bool isSimPaused = latestPayload != null && latestPayload.simulation_paused;
+            string netStatus;
+            Color netColor;
+
+            if (isSimPaused)
+            {
+                netStatus = "CRITICAL: SIMULATION PAUSED - HARDWARE SAFE-STOP TRIGGERED";
+                netColor = lockedColor;
+            }
+            else
+            {
+                netStatus = isLive ? "LIVE UDP (Port 5003)" : "AUTONOMOUS SIM SENSORS";
+                netColor = isLive ? greenHudColor : cyanHudColor;
+            }
 
             GUI.color = netColor;
             GUI.Label(new Rect(bannerRect.x + 12, bannerRect.y + 26, bannerRect.width - 24, 16), $"STREAM: {netStatus} | 20 HZ DETERMINISTIC", smallStyle);
@@ -304,7 +322,7 @@ namespace SIH.Perception
 
         private void DrawPovDock(CameraViewMode mode)
         {
-            float dockW = 540f;
+            float dockW = 680f;
             float dockH = 44f;
             float dockX = (Screen.width - dockW) / 2f;
             float dockY = Screen.height - dockH - 16f;
@@ -333,6 +351,10 @@ namespace SIH.Perception
             if (GUI.Button(new Rect(startX + (btnW + pad) * 3, btnY, btnW, btnH), "[4] COMMANDER", mode == CameraViewMode.Commander ? activeBtnStyle : btnStyle))
             {
                 if (cameraController != null) cameraController.SwitchToCommander();
+            }
+            if (GUI.Button(new Rect(startX + (btnW + pad) * 4, btnY, btnW, btnH), "[5] CIVILIAN EV", btnStyle))
+            {
+                UnityEngine.SceneManagement.SceneManager.LoadScene("CivilianUrbanProvingGround");
             }
         }
 

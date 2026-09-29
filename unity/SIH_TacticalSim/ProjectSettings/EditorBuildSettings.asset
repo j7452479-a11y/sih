@@ -8,5 +8,8 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/TacticalProvingGround.unity
     guid: 0c55ae94fec75c64ba36f4bc176f2038
+  - enabled: 1
+    path: Assets/Scenes/CivilianUrbanProvingGround.unity
+    guid: b2847ce2315061441929ca32306007b4
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}

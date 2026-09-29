@@ -617,37 +617,196 @@
     bridgeGroup.add(carpet);
     scene.add(bridgeGroup);
 
+    // Helper: Create Village House with Pitched Roof, Chimney, Door, and Windows
+    function createVillageHouseThree(name, x, z, w, h, d, wallColor, roofColor) {
+      const g = new THREE.Group();
+      g.name = name;
+      g.position.set(x, 0, z);
+
+      // 1. Base Wall Block
+      const wallMat = new THREE.MeshStandardMaterial({ color: wallColor, roughness: 0.8 });
+      const walls = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), wallMat);
+      walls.position.y = h * 0.5;
+      walls.castShadow = true; walls.receiveShadow = true;
+      g.add(walls);
+
+      // 2. Pitched Roof (Hipped/Gabled Roof Cap)
+      const roofH = h * 0.45;
+      const roofMat = new THREE.MeshStandardMaterial({ color: roofColor, roughness: 0.7 });
+      const roof = new THREE.Mesh(new THREE.ConeGeometry(Math.max(w, d) * 0.72, roofH, 4), roofMat);
+      roof.position.y = h + roofH * 0.5;
+      roof.rotation.y = Math.PI / 4;
+      roof.scale.set(w / Math.max(w, d), 1, d / Math.max(w, d));
+      roof.castShadow = true;
+      g.add(roof);
+
+      // 3. Brick Chimney
+      const chimneyMat = new THREE.MeshStandardMaterial({ color: 0x8b3a2b, roughness: 0.9 });
+      const chimney = new THREE.Mesh(new THREE.BoxGeometry(w * 0.14, roofH * 0.9, w * 0.14), chimneyMat);
+      chimney.position.set(w * 0.28, h + roofH * 0.7, d * 0.22);
+      chimney.castShadow = true;
+      g.add(chimney);
+
+      // 4. Wooden Entrance Door
+      const doorMat = new THREE.MeshStandardMaterial({ color: 0x3d2714, roughness: 0.8 });
+      const doorW = Math.min(1.4, w * 0.2);
+      const doorH = Math.min(2.4, h * 0.45);
+      const door = new THREE.Mesh(new THREE.BoxGeometry(doorW, doorH, 0.1), doorMat);
+      door.position.set(0, doorH * 0.5, -d * 0.5 - 0.05);
+      g.add(door);
+
+      // 5. Glowing Windows
+      const winMat = new THREE.MeshStandardMaterial({ color: 0xfde047, emissive: 0xf59e0b, emissiveIntensity: 0.35 });
+      const winW = Math.min(1.2, w * 0.18);
+      const winH = Math.min(1.2, h * 0.25);
+      const winL = new THREE.Mesh(new THREE.BoxGeometry(winW, winH, 0.06), winMat);
+      winL.position.set(-w * 0.3, h * 0.55, -d * 0.5 - 0.05);
+      const winR = new THREE.Mesh(new THREE.BoxGeometry(winW, winH, 0.06), winMat);
+      winR.position.set(w * 0.3, h * 0.55, -d * 0.5 - 0.05);
+      g.add(winL, winR);
+
+      scene.add(g);
+      return g;
+    }
+
+    // Helper: Create Authentic Gothic Cathedral / Church Complex
+    function createGothicCathedralThree(x, z) {
+      const church = new THREE.Group();
+      church.position.set(x, 0, z);
+
+      const stoneMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.8 });
+      const roofMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.6 });
+      const portalMat = new THREE.MeshStandardMaterial({ color: 0x27190d, roughness: 0.9 });
+      const roseMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, emissive: 0x0284c7, emissiveIntensity: 0.5 });
+
+      // 1. Central Nave (Main Hall)
+      const nave = new THREE.Mesh(new THREE.BoxGeometry(14, 9, 24), stoneMat);
+      nave.position.set(0, 4.5, 0);
+      nave.castShadow = true; nave.receiveShadow = true;
+      church.add(nave);
+
+      // Nave Pitched Roof
+      const naveRoof = new THREE.Mesh(new THREE.ConeGeometry(14, 4, 4), roofMat);
+      naveRoof.position.set(0, 11, 0);
+      naveRoof.rotation.y = Math.PI / 4;
+      naveRoof.scale.set(1.0, 1.0, 1.7);
+      naveRoof.castShadow = true;
+      church.add(naveRoof);
+
+      // 2. Transept (Cross Wings - Latin Cross)
+      const transept = new THREE.Mesh(new THREE.BoxGeometry(26, 8, 10), stoneMat);
+      transept.position.set(0, 4.0, 2);
+      transept.castShadow = true; transept.receiveShadow = true;
+      church.add(transept);
+
+      const transeptRoof = new THREE.Mesh(new THREE.ConeGeometry(12, 3.5, 4), roofMat);
+      transeptRoof.position.set(0, 9.75, 2);
+      transeptRoof.rotation.y = Math.PI / 4;
+      transeptRoof.scale.set(2.2, 1.0, 0.85);
+      transeptRoof.castShadow = true;
+      church.add(transeptRoof);
+
+      // 3. Tall Bell Tower
+      const tower = new THREE.Mesh(new THREE.BoxGeometry(7.5, 15, 7.5), stoneMat);
+      tower.position.set(0, 7.5, -14);
+      tower.castShadow = true; tower.receiveShadow = true;
+      church.add(tower);
+
+      const belfryCap = new THREE.Mesh(new THREE.BoxGeometry(8, 1.5, 8), roofMat);
+      belfryCap.position.set(0, 15.75, -14);
+      belfryCap.castShadow = true;
+      church.add(belfryCap);
+
+      // 4. Pointed 18m Spire
+      const spire = new THREE.Mesh(new THREE.ConeGeometry(2.6, 6, 8), roofMat);
+      spire.position.set(0, 19.5, -14);
+      spire.castShadow = true;
+      church.add(spire);
+
+      // 5. Arched Entrance Portal & Rose Window
+      const portal = new THREE.Mesh(new THREE.BoxGeometry(2.6, 3.4, 0.2), portalMat);
+      portal.position.set(0, 1.7, -17.8);
+      church.add(portal);
+
+      const rose = new THREE.Mesh(new THREE.CylinderGeometry(1.4, 1.4, 0.15, 16), roseMat);
+      rose.rotation.x = Math.PI / 2;
+      rose.position.set(0, 5.8, -17.8);
+      church.add(rose);
+
+      scene.add(church);
+      return church;
+    }
+
+    // 2. Central Cobblestone Road Network with Sidewalk Curbs & Lane Markings
+    const roadMat = new THREE.MeshStandardMaterial({ color: 0x141a22, roughness: 0.85 });
+    const curbMat = new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.7 });
+    const lineMat = new THREE.MeshBasicMaterial({ color: 0xf8fafc });
+
+    // North-South Avenue (Passing directly under the bridge)
+    const roadNS = new THREE.Mesh(new THREE.PlaneGeometry(10, 104), roadMat);
+    roadNS.rotation.x = -Math.PI / 2;
+    roadNS.position.set(0, 0.05, 0);
+    roadNS.receiveShadow = true;
+    scene.add(roadNS);
+
+    // East-West Cross Street
+    const roadEW = new THREE.Mesh(new THREE.PlaneGeometry(104, 10), roadMat);
+    roadEW.rotation.x = -Math.PI / 2;
+    roadEW.position.set(0, 0.05, 0);
+    roadEW.receiveShadow = true;
+    scene.add(roadEW);
+
+    // Raised Sidewalk Curbs (15cm Borders)
+    function addCurb(w, h, d, x, y, z) {
+      const c = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), curbMat);
+      c.position.set(x, y, z);
+      c.castShadow = true; c.receiveShadow = true;
+      scene.add(c);
+    }
+    addCurb(0.35, 0.15, 104, -5.18, 0.08, 0); // NS Left
+    addCurb(0.35, 0.15, 104, 5.18, 0.08, 0);  // NS Right
+    addCurb(104, 0.15, 0.35, 0, 0.08, 5.18);  // EW North
+    addCurb(104, 0.15, 0.35, 0, 0.08, -5.18); // EW South
+
+    // Dashed White Lane Lines along North-South Avenue
+    for (let z = -48; z <= 48; z += 5.5) {
+      if (Math.abs(z) < 7) continue; // underpass clearance
+      const line = new THREE.Mesh(new THREE.PlaneGeometry(0.22, 2.8), lineMat);
+      line.rotation.x = -Math.PI / 2;
+      line.position.set(0, 0.06, z);
+      scene.add(line);
+    }
+    // Dashed White Lane Lines along East-West Cross Street
+    for (let x = -48; x <= 48; x += 5.5) {
+      if (Math.abs(x) < 7) continue;
+      const line = new THREE.Mesh(new THREE.PlaneGeometry(2.8, 0.22), lineMat);
+      line.rotation.x = -Math.PI / 2;
+      line.position.set(x, 0.06, 0);
+      scene.add(line);
+    }
+
+    // Pedestrian Zebra Crosswalks
+    for (let x = -3.6; x <= 3.6; x += 1.2) {
+      const zS = new THREE.Mesh(new THREE.PlaneGeometry(0.55, 3.0), lineMat);
+      zS.rotation.x = -Math.PI / 2;
+      zS.position.set(x, 0.06, -16.0);
+      scene.add(zS);
+
+      const zN = new THREE.Mesh(new THREE.PlaneGeometry(0.55, 3.0), lineMat);
+      zN.rotation.x = -Math.PI / 2;
+      zN.position.set(x, 0.06, 16.0);
+      scene.add(zN);
+    }
+
     // 4. Church with Tall Pointed Spire (18m height apex)
-    const churchGroup = new THREE.Group();
-    const churchBase = new THREE.Mesh(new THREE.BoxGeometry(14, 10, 20), new THREE.MeshStandardMaterial({ color: 0x243242 }));
-    churchBase.position.set(24, 5, 24);
-    churchBase.castShadow = true; churchBase.receiveShadow = true;
-    churchGroup.add(churchBase);
+    const churchGroup = createGothicCathedralThree(24, 24);
 
-    const spire = new THREE.Mesh(new THREE.ConeGeometry(4, 12, 4), new THREE.MeshStandardMaterial({ color: 0x4a6585 }));
-    spire.position.set(24, 16, 28);
-    spire.rotation.y = Math.PI / 4;
-    spire.castShadow = true;
-    churchGroup.add(spire);
-    scene.add(churchGroup);
+    // 5. 4-Story Townhouse Building
+    const bld4Story = createVillageHouseThree("Townhouse_3Story", -26, 24, 16, 11, 16, 0x1e293b, 0x0f172a);
 
-    // 5. 4-Story Building (14m height)
-    const bld4Story = new THREE.Mesh(new THREE.BoxGeometry(16, 14, 16), new THREE.MeshStandardMaterial({ color: 0x1f2c3d }));
-    bld4Story.position.set(-26, 7, 24);
-    bld4Story.castShadow = true; bld4Story.receiveShadow = true;
-    scene.add(bld4Story);
-
-    // 6. 1-Story & 2-Story Houses
-    const houseMat = new THREE.MeshStandardMaterial({ color: 0x182432 });
-    const h1 = new THREE.Mesh(new THREE.BoxGeometry(12, 4.5, 12), houseMat);
-    h1.position.set(-24, 2.25, -24);
-    h1.castShadow = true; h1.receiveShadow = true;
-    scene.add(h1);
-
-    const h2 = new THREE.Mesh(new THREE.BoxGeometry(14, 7.5, 12), houseMat);
-    h2.position.set(24, 3.75, -24);
-    h2.castShadow = true; h2.receiveShadow = true;
-    scene.add(h2);
+    // 6. 1-Story & 2-Story Village Houses
+    const h1 = createVillageHouseThree("Cottage_West", -24, -24, 12, 4.5, 12, 0x334155, 0x7c2d12);
+    const h2 = createVillageHouseThree("Villa_East", 24, -24, 14, 6.5, 12, 0x475569, 0x334155);
 
     // 7. Stone Occlusion Wall (Primary Barrier at Y = -14m for Kalman Coasting Test)
     const stoneWall = new THREE.Mesh(new THREE.BoxGeometry(16, 2.4, 1.2), new THREE.MeshStandardMaterial({ color: 0x5a6d80 }));
@@ -708,30 +867,61 @@
 
     // 2. Red Mitsubishi Evo RC Car Rover (UGV)
     const ugvGroup = new THREE.Group();
-    const carBody = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.6, 2.8), new THREE.MeshStandardMaterial({ color: 0xff2233, metalness: 0.5, roughness: 0.3 }));
-    carBody.position.y = 0.5;
+    // Lower aerodynamic rally chassis
+    const ugvBodyMat = new THREE.MeshStandardMaterial({ color: 0xd50000, metalness: 0.6, roughness: 0.3 });
+    const carBody = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.45, 2.9), ugvBodyMat);
+    carBody.position.y = 0.45;
     carBody.castShadow = true;
     ugvGroup.add(carBody);
 
-    const carRoof = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.4, 1.4), new THREE.MeshStandardMaterial({ color: 0xffffff }));
-    carRoof.position.set(0, 0.9, -0.2);
+    // Cockpit cabin glass
+    const ugvGlassMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.1, metalness: 0.9 });
+    const carRoof = new THREE.Mesh(new THREE.BoxGeometry(1.15, 0.35, 1.4), ugvGlassMat);
+    carRoof.position.set(0, 0.82, -0.15);
     ugvGroup.add(carRoof);
 
-    // Wheels
+    // Roof cap
+    const roofCap = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.05, 1.35), ugvBodyMat);
+    roofCap.position.set(0, 1.01, -0.15);
+    ugvGroup.add(roofCap);
+
+    // 4 Wheels with Rims
     const wheels = [];
-    const wheelGeo = new THREE.CylinderGeometry(0.35, 0.35, 0.3, 16);
-    const wheelMat = new THREE.MeshStandardMaterial({ color: 0x111111 });
-    [[-0.75, 0.35, 0.9], [0.75, 0.35, 0.9], [-0.75, 0.35, -0.9], [0.75, 0.35, -0.9]].forEach(pos => {
+    const wheelGeo = new THREE.CylinderGeometry(0.34, 0.34, 0.22, 16);
+    const rimGeo = new THREE.CylinderGeometry(0.20, 0.20, 0.24, 8);
+    const wheelMat = new THREE.MeshStandardMaterial({ color: 0x18181b, roughness: 0.9 });
+    const rimMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.8, roughness: 0.2 });
+
+    [[-0.82, 0.34, 0.95], [0.82, 0.34, 0.95], [-0.82, 0.34, -0.95], [0.82, 0.34, -0.95]].forEach(pos => {
       const w = new THREE.Mesh(wheelGeo, wheelMat);
       w.rotation.z = Math.PI / 2;
       w.position.set(...pos);
+      const rim = new THREE.Mesh(rimGeo, rimMat);
+      rim.rotation.z = Math.PI / 2;
+      rim.position.set(...pos);
       ugvGroup.add(w);
+      ugvGroup.add(rim);
       wheels.push(w);
+      wheels.push(rim);
     });
+
+    // Dual Headlights
+    const ugvHeadMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+    const headL = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.14, 0.05), ugvHeadMat);
+    headL.position.set(-0.48, 0.48, 1.46);
+    const headR = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.14, 0.05), ugvHeadMat);
+    headR.position.set(0.48, 0.48, 1.46);
+    ugvGroup.add(headL, headR);
+
+    // Red Taillight bar
+    const ugvTailMat = new THREE.MeshBasicMaterial({ color: 0xff1744 });
+    const tailBar = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.08, 0.05), ugvTailMat);
+    tailBar.position.set(0, 0.52, -1.46);
+    ugvGroup.add(tailBar);
 
     // Headlights Spot
     const carLight = new THREE.SpotLight(0xfffae0, 2.5, 35, Math.PI / 6, 0.5);
-    carLight.position.set(0, 0.6, 1.4);
+    carLight.position.set(0, 0.55, 1.45);
     carLight.target.position.set(0, 0.2, 20);
     ugvGroup.add(carLight);
     ugvGroup.add(carLight.target);
@@ -789,17 +979,63 @@
     let simDomain = 'MILITARY'; // 'MILITARY' or 'CIVILIAN'
 
     const evGroup = new THREE.Group();
-    // Blue sedan chassis
-    const evBody = new THREE.Mesh(new THREE.BoxGeometry(2.0, 1.1, 4.4), new THREE.MeshStandardMaterial({ color: 0x0284c7, roughness: 0.3, metalness: 0.4 }));
-    evBody.position.y = 0.65;
+    const evBodyMat = new THREE.MeshStandardMaterial({ color: 0x0284c7, roughness: 0.3, metalness: 0.5 });
+    // Lower aerodynamic sedan body
+    const evBody = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.65, 4.4), evBodyMat);
+    evBody.position.y = 0.52;
     evGroup.add(evBody);
-    // Cabin glass
-    const evCabin = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.7, 2.2), new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.1, metalness: 0.9 }));
-    evCabin.position.set(0, 1.25, -0.2);
+
+    // Greenhouse cabin / windshield & windows
+    const evGlassMat = new THREE.MeshStandardMaterial({ color: 0x0b1320, roughness: 0.1, metalness: 0.85 });
+    const evCabin = new THREE.Mesh(new THREE.BoxGeometry(1.55, 0.55, 2.3), evGlassMat);
+    evCabin.position.set(0, 1.05, -0.3);
     evGroup.add(evCabin);
-    // Roof LiDAR sensor
-    const evLidar = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.22, 16), new THREE.MeshStandardMaterial({ color: 0x00e5ff, emissive: 0x00e5ff, emissiveIntensity: 0.5 }));
-    evLidar.position.set(0, 1.7, 0.4);
+
+    // Roof cap
+    const evRoof = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.05, 2.2), evBodyMat);
+    evRoof.position.set(0, 1.34, -0.3);
+    evGroup.add(evRoof);
+
+    // 4 Rubber Tires + Silver Rims
+    const evWheelGeo = new THREE.CylinderGeometry(0.34, 0.34, 0.24, 16);
+    const evRimGeo = new THREE.CylinderGeometry(0.22, 0.22, 0.26, 8);
+    const evWheelMat = new THREE.MeshStandardMaterial({ color: 0x151518, roughness: 0.9 });
+    const evRimMat = new THREE.MeshStandardMaterial({ color: 0xcfd8dc, metalness: 0.8, roughness: 0.2 });
+
+    [[-1.02, 0.34, 1.4], [1.02, 0.34, 1.4], [-1.02, 0.34, -1.4], [1.02, 0.34, -1.4]].forEach(pos => {
+      const w = new THREE.Mesh(evWheelGeo, evWheelMat);
+      w.rotation.z = Math.PI / 2;
+      w.position.set(...pos);
+      const r = new THREE.Mesh(evRimGeo, evRimMat);
+      r.rotation.z = Math.PI / 2;
+      r.position.set(...pos);
+      evGroup.add(w, r);
+    });
+
+    // Dual LED Headlights
+    const evHeadMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+    const evHL = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.15, 0.05), evHeadMat);
+    evHL.position.set(-0.65, 0.62, 2.21);
+    const evHR = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.15, 0.05), evHeadMat);
+    evHR.position.set(0.65, 0.62, 2.21);
+    evGroup.add(evHL, evHR);
+
+    // Rear Taillight Bar
+    const evTailMat = new THREE.MeshBasicMaterial({ color: 0xff1744 });
+    const evTail = new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.12, 0.05), evTailMat);
+    evTail.position.set(0, 0.68, -2.21);
+    evGroup.add(evTail);
+
+    // Side Mirrors
+    const mirL = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.08, 0.18), evBodyMat);
+    mirL.position.set(-0.95, 0.95, 0.5);
+    const mirR = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.08, 0.18), evBodyMat);
+    mirR.position.set(0.95, 0.95, 0.5);
+    evGroup.add(mirL, mirR);
+
+    // Roof LiDAR puck (sensor)
+    const evLidar = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.14, 0.18, 16), new THREE.MeshStandardMaterial({ color: 0x00e5ff, emissive: 0x00e5ff, emissiveIntensity: 0.6 }));
+    evLidar.position.set(0, 1.45, 0.4);
     evGroup.add(evLidar);
 
     // 1,200 Automotive Grazing-Angle LiDAR Laser Return Rings (Expanding Concentric Ellipses)
@@ -845,9 +1081,46 @@
     scene.add(evGroup);
 
     // Parked Delivery Van at Right Curb (Occlusion at Z = 5.0m, X = 3.2m)
-    const vanMesh = new THREE.Mesh(new THREE.BoxGeometry(2.0, 2.4, 4.8), new THREE.MeshStandardMaterial({ color: 0x475569 }));
-    vanMesh.position.set(3.2, 1.2, 5.0);
-    vanMesh.castShadow = true;
+    const vanMesh = new THREE.Group();
+    vanMesh.position.set(3.2, 0, 5.0);
+
+    const cabMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.5 });
+    const boxMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, roughness: 0.4 });
+    const vanGlass = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.1, metalness: 0.8 });
+
+    // Cab
+    const vanCab = new THREE.Mesh(new THREE.BoxGeometry(1.9, 1.6, 1.6), cabMat);
+    vanCab.position.set(0, 1.0, 1.6);
+    vanCab.castShadow = true;
+    vanMesh.add(vanCab);
+
+    // Windshield
+    const vanWind = new THREE.Mesh(new THREE.BoxGeometry(1.65, 0.7, 0.08), vanGlass);
+    vanWind.position.set(0, 1.3, 2.38);
+    vanMesh.add(vanWind);
+
+    // Large Cargo Box
+    const vanBoxMesh = new THREE.Mesh(new THREE.BoxGeometry(2.1, 2.3, 3.4), boxMat);
+    vanBoxMesh.position.set(0, 1.45, -0.7);
+    vanBoxMesh.castShadow = true;
+    vanMesh.add(vanBoxMesh);
+
+    // 4 Van Wheels
+    const vanWheelGeo = new THREE.CylinderGeometry(0.38, 0.38, 0.25, 16);
+    [[-1.02, 0.38, 1.5], [1.02, 0.38, 1.5], [-1.05, 0.38, -1.2], [1.05, 0.38, -1.2]].forEach(pos => {
+      const w = new THREE.Mesh(vanWheelGeo, evWheelMat);
+      w.rotation.z = Math.PI / 2;
+      w.position.set(...pos);
+      vanMesh.add(w);
+    });
+
+    // Van Headlights
+    const vanHL = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.22, 0.05), evHeadMat);
+    vanHL.position.set(-0.65, 0.7, 2.42);
+    const vanHR = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.22, 0.05), evHeadMat);
+    vanHR.position.set(0.65, 0.7, 2.42);
+    vanMesh.add(vanHL, vanHR);
+
     scene.add(vanMesh);
 
     // 3D Bounding Box Helper around Van
@@ -1065,7 +1338,8 @@
     const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const wsUrl = `${wsProtocol}//${window.location.host}/ws/c2`;
     let ws = null;
-    let liveTracks = [];
+    let latestTelemetry = null;
+    let lastTelemetryTime = 0;
 
     function connectWs() {
       try {
@@ -1078,6 +1352,9 @@
           try {
             const data = JSON.parse(event.data);
             if (data.type === 'C2_UPDATE') {
+              latestTelemetry = data;
+              lastTelemetryTime = performance.now();
+
               if (data.fps) document.getElementById('dispFps').innerText = `LIVE ${data.fps} HZ`;
               if (data.latency_ms) document.getElementById('dispLatency').innerText = `${data.latency_ms.toFixed(2)} ms`;
               if (data.cell_count) document.getElementById('dispCells').innerText = data.cell_count.toLocaleString();
@@ -1113,13 +1390,25 @@
       const dt = clock.getDelta();
       simTime += dt;
 
-      // 1. Advance UAV along smooth circular orbit (+30m Alt, R = 32m)
-      const uavSplineRadius = 32.0;
-      const uavSpeed = 0.25;
-      const uX = Math.cos(simTime * uavSpeed) * uavSplineRadius;
-      const uZ = Math.sin(simTime * uavSpeed) * uavSplineRadius;
-      uavGroup.position.set(uX, 30.0, uZ);
-      uavGroup.rotation.y = -(simTime * uavSpeed) + Math.PI / 2;
+      const hasLiveTelemetry = latestTelemetry && (performance.now() - lastTelemetryTime < 1800);
+
+      // 1. Advance UAV (Live Telemetry from PhysX / Drone Orbit)
+      let uX, uZ, uAlt, uYaw;
+      if (hasLiveTelemetry && latestTelemetry.uav_pose && latestTelemetry.uav_pose.x !== undefined) {
+        uX = latestTelemetry.uav_pose.x;
+        uZ = latestTelemetry.uav_pose.y; // ENU North -> Three.js Z
+        uAlt = latestTelemetry.uav_pose.z || 30.0;
+        uYaw = latestTelemetry.uav_pose.yaw !== undefined ? -latestTelemetry.uav_pose.yaw * Math.PI / 180 : -(simTime * 0.25) + Math.PI / 2;
+        uavGroup.position.set(uX, uAlt, uZ);
+        uavGroup.rotation.y = uYaw;
+      } else {
+        const uavSplineRadius = 32.0;
+        const uavSpeed = 0.25;
+        uX = Math.cos(simTime * uavSpeed) * uavSplineRadius;
+        uZ = Math.sin(simTime * uavSpeed) * uavSplineRadius;
+        uavGroup.position.set(uX, 30.0, uZ);
+        uavGroup.rotation.y = -(simTime * uavSpeed) + Math.PI / 2;
+      }
 
       // Spin Drone Propellers
       rotors.forEach(r => r.rotation.y += dt * 35.0);
@@ -1127,14 +1416,23 @@
       // Move Concentric Foveated Rings centered with Drone Shadow
       ringGroup.position.set(uX, 0, uZ);
 
-      // 2. Advance UGV RC Car along Elliptical Path (A=26m, B=16m) Through Bridge Underpass
-      const ugvA = 26.0;
-      const ugvB = 16.0;
-      const ugvTheta = simTime * uavSpeed - 0.22;
-      const ugvX = Math.cos(ugvTheta) * ugvA;
-      const ugvZ = Math.sin(ugvTheta) * ugvB;
-      ugvGroup.position.set(ugvX, 0, ugvZ);
-      ugvGroup.rotation.y = -Math.atan2(-ugvA * Math.sin(ugvTheta), ugvB * Math.cos(ugvTheta));
+      // 2. Advance UGV RC Car (Live Telemetry / Elliptical Underpass Path)
+      if (hasLiveTelemetry && latestTelemetry.ugv_pose && latestTelemetry.ugv_pose.x !== undefined) {
+        const ugvX = latestTelemetry.ugv_pose.x;
+        const ugvZ = latestTelemetry.ugv_pose.y;
+        const ugvY = latestTelemetry.ugv_pose.z || 0.05;
+        const ugvYaw = latestTelemetry.ugv_pose.yaw !== undefined ? -latestTelemetry.ugv_pose.yaw * Math.PI / 180 : 0;
+        ugvGroup.position.set(ugvX, ugvY, ugvZ);
+        ugvGroup.rotation.y = ugvYaw;
+      } else {
+        const ugvA = 26.0;
+        const ugvB = 16.0;
+        const ugvTheta = simTime * 0.25 - 0.22;
+        const ugvX = Math.cos(ugvTheta) * ugvA;
+        const ugvZ = Math.sin(ugvTheta) * ugvB;
+        ugvGroup.position.set(ugvX, 0, ugvZ);
+        ugvGroup.rotation.y = -Math.atan2(-ugvA * Math.sin(ugvTheta), ugvB * Math.cos(ugvTheta));
+      }
 
       // Rotate Rover Wheels
       wheels.forEach(w => w.rotation.x += dt * 8.0);
@@ -1142,7 +1440,7 @@
       // 3. Update Dynamic Catenary Sag Tether (14m - 20m)
       const p1 = uavGroup.position.clone();
       const p2 = ugvGroup.position.clone().add(new THREE.Vector3(0, 0.9, 0));
-      const tetherDist = p1.distanceTo(p2);
+      const tetherDist = hasLiveTelemetry && latestTelemetry.tether_length_m ? latestTelemetry.tether_length_m : p1.distanceTo(p2);
       const sagAmp = Math.max(0.6, Math.min(4.8, (22.0 - tetherDist) * 0.8));
       
       const posAttr = tetherGeo.attributes.position;
@@ -1155,46 +1453,78 @@
       }
       posAttr.needsUpdate = true;
 
-      const tStat = (tetherDist < 14.0) ? 'SLACK' : (tetherDist > 20.0 ? 'HIGH_TENSION' : 'NOMINAL');
-      if (!ws || ws.readyState !== WebSocket.OPEN) {
-        document.getElementById('dispTether').innerText = `${tetherDist.toFixed(1)}m [${tStat}]`;
-        document.getElementById('dispTether').style.color = (tStat === 'NOMINAL') ? '#00ff88' : '#ffaa00';
+      const tStat = hasLiveTelemetry && latestTelemetry.tether_status ? latestTelemetry.tether_status : ((tetherDist < 14.0) ? 'SLACK' : (tetherDist > 20.0 ? 'HIGH_TENSION' : 'NOMINAL'));
+      document.getElementById('dispTether').innerText = `${tetherDist.toFixed(1)}m [${tStat}]`;
+      document.getElementById('dispTether').style.color = (tStat === 'NOMINAL') ? '#00ff88' : '#ffaa00';
+
+      // 4. Update Hostiles Movement from Real MTT Tracker
+      if (hasLiveTelemetry && latestTelemetry.tracks && latestTelemetry.tracks.length > 0) {
+        const t0 = latestTelemetry.tracks[0];
+        hostileA.position.set(t0.x, t0.z, t0.y);
+        if (latestTelemetry.tracks.length > 1) {
+          const t1 = latestTelemetry.tracks[1];
+          hostileB.position.set(t1.x, t1.z, t1.y);
+          const isCoasting = (t1.state === 'COASTING');
+          document.getElementById('tBravo').innerText = isCoasting ? 'COASTING [OCCLUDED]' : 'LOCKED [LINE-OF-SIGHT]';
+          document.getElementById('tBravo').style.color = isCoasting ? '#ffaa00' : '#ff3344';
+        }
+      } else {
+        // Hostile A: Crosses East Street (X in [18, 34], Z = 2)
+        const hAx = 18.0 + (Math.sin(simTime * 0.45) + 1.0) * 8.0;
+        hostileA.position.set(hAx, 0, 2.0);
+
+        // Hostile B: Patrols behind Primary Stone Wall (Z = -14m, X in [-12, 12])
+        const hBx = Math.sin(simTime * 0.40) * 12.0;
+        hostileB.position.set(hBx, 0, -14.0);
+        
+        // Occluded when behind the stone wall (X in [-8, 8])
+        const isOccluded = Math.abs(hBx) <= 8.0;
+        document.getElementById('tBravo').innerText = isOccluded ? 'COASTING [OCCLUDED]' : 'LOCKED [LINE-OF-SIGHT]';
+        document.getElementById('tBravo').style.color = isOccluded ? '#ffaa00' : '#ff3344';
       }
 
-      // 4. Update Hostiles Movement
-      // Hostile A: Crosses East Street (X in [18, 34], Z = 2)
-      const hAx = 18.0 + (Math.sin(simTime * 0.45) + 1.0) * 8.0;
-      hostileA.position.set(hAx, 0, 2.0);
-
-      // Hostile B: Patrols behind Primary Stone Wall (Z = -14m, X in [-12, 12])
-      const hBx = Math.sin(simTime * 0.40) * 12.0;
-      hostileB.position.set(hBx, 0, -14.0);
-      
-      // Occluded when behind the stone wall (X in [-8, 8])
-      const isOccluded = Math.abs(hBx) <= 8.0;
-      document.getElementById('tBravo').innerText = isOccluded ? 'COASTING [OCCLUDED]' : 'LOCKED [LINE-OF-SIGHT]';
-      document.getElementById('tBravo').style.color = isOccluded ? '#ffaa00' : '#ff3344';
-
       // 5. Update Sim Civilian EV & Pedestrian Dynamics
-      const pedX = 3.8 - ((simTime * 1.6) % 7.6);
-      pedGroup.position.set(pedX, 0, 6.0);
+      let pedX = 3.8 - ((simTime * 1.6) % 7.6);
+      let isPedOccluded = false;
+      let inBrakingZone = false;
 
-      const evZ = evGroup.position.z;
-      const distToPed = 6.0 - evZ;
-      // Radial Occlusion Test: Pedestrian is occluded behind the delivery van (X in [2.0, 4.2] and distance > 10m)
-      const isPedOccluded = (pedX >= 2.0 && pedX <= 4.2 && distToPed > 10.0);
-      const inBrakingZone = (distToPed > 0.5 && distToPed < 22.0 && Math.abs(pedX) < 1.75 && !isPedOccluded);
+      if (hasLiveTelemetry && latestTelemetry.ev_state && latestTelemetry.ev_state.ego_pose) {
+        const ep = latestTelemetry.ev_state.ego_pose;
+        evGroup.position.set(ep.x, ep.z, ep.y);
+        if (ep.pitch !== undefined) {
+          evGroup.rotation.x = THREE.MathUtils.degToRad(ep.pitch);
+        }
+        if (ep.yaw !== undefined) {
+          evGroup.rotation.y = THREE.MathUtils.degToRad(-ep.yaw);
+        }
+        inBrakingZone = (latestTelemetry.ev_state.aeb_status === 'EMERGENCY_BRAKING_ACTIVE');
+        corridorMat.color.setHex(inBrakingZone ? 0xff1744 : 0x00ff88);
+        currentEvSpeed = latestTelemetry.ev_state.speed_mps !== undefined ? latestTelemetry.ev_state.speed_mps : 10.0;
 
-      if (inBrakingZone) {
-        corridorMat.color.setHex(0xff1744); // Red AEB emergency stop
-        evGroup.rotation.x = -0.044; // -2.5° nose-down pitch under hard braking
-        currentEvSpeed = Math.max(0, currentEvSpeed - dt * 7.5);
+        if (latestTelemetry.ev_state.pedestrian_tracks && latestTelemetry.ev_state.pedestrian_tracks.length > 0) {
+          const ped = latestTelemetry.ev_state.pedestrian_tracks[0];
+          pedX = ped.x;
+          pedGroup.position.set(ped.x, ped.z, ped.y);
+          isPedOccluded = (ped.state === 'COASTING');
+        }
       } else {
-        corridorMat.color.setHex(0x00ff88); // Green nominal cruise
-        evGroup.rotation.x = 0.0;
-        currentEvSpeed = Math.min(10.0, currentEvSpeed + dt * 2.5);
-        evGroup.position.z += currentEvSpeed * dt;
-        if (evGroup.position.z > 35.0) evGroup.position.z = -35.0;
+        pedGroup.position.set(pedX, 0, 6.0);
+        const evZ = evGroup.position.z;
+        const distToPed = 6.0 - evZ;
+        isPedOccluded = (pedX >= 2.0 && pedX <= 4.2 && distToPed > 10.0);
+        inBrakingZone = (distToPed > 0.5 && distToPed < 22.0 && Math.abs(pedX) < 1.75 && !isPedOccluded);
+
+        if (inBrakingZone) {
+          corridorMat.color.setHex(0xff1744); // Red AEB emergency stop
+          evGroup.rotation.x = -0.044; // -2.5° nose-down pitch under hard braking
+          currentEvSpeed = Math.max(0, currentEvSpeed - dt * 7.5);
+        } else {
+          corridorMat.color.setHex(0x00ff88); // Green nominal cruise
+          evGroup.rotation.x = 0.0;
+          currentEvSpeed = Math.min(10.0, currentEvSpeed + dt * 2.5);
+          evGroup.position.z += currentEvSpeed * dt;
+          if (evGroup.position.z > 35.0) evGroup.position.z = -35.0;
+        }
       }
 
       // 6. Camera POV Modes (Strictly Ego-Centric in Civilian Mode - No God-Mode Top-Down!)

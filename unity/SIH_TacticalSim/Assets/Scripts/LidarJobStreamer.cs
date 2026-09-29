@@ -127,32 +127,39 @@ namespace SIH.Perception
             int layerObstacle = LayerMask.NameToLayer("Obstacle");
             int layerHostile = LayerMask.NameToLayer("Hostile");
 
+            Vector3 euler = transform.rotation.eulerAngles;
+
             // Stream packets in chunks of up to 80 points to guarantee < 1500B MTU
-            for (int chunkStart = 0; chunkStart < validHits.Count && chunkStart < 240; chunkStart += 80)
+            for (int chunkStart = 0; chunkStart < validHits.Count && chunkStart < 800; chunkStart += 80)
             {
                 int chunkCount = Mathf.Min(80, validHits.Count - chunkStart);
 
                 using (MemoryStream ms = new MemoryStream())
                 using (BinaryWriter writer = new BinaryWriter(ms))
                 {
-                    // 25-byte Header: <4sIdBII
-                    writer.Write(System.Text.Encoding.ASCII.GetBytes("SIH1")); // 4 bytes
+                    // 49-byte SIH2 Header: <4sIdBII6f
+                    writer.Write(System.Text.Encoding.ASCII.GetBytes("SIH2")); // 4 bytes
                     writer.Write(frameId);                                     // uint32 (4 bytes)
                     writer.Write(unixTimestamp);                               // float64 (8 bytes)
                     writer.Write(sensorType);                                  // uint8 (1 byte)
                     writer.Write((uint)chunkCount);                            // uint32 (4 bytes)
                     writer.Write((uint)0);                                     // checksum uint32 (4 bytes)
+                    writer.Write(sensorOrigin.x);                              // origin_x (East) float32
+                    writer.Write(sensorOrigin.z);                              // origin_y (North) float32
+                    writer.Write(sensorOrigin.y);                              // origin_z (Up) float32
+                    writer.Write(euler.z);                                     // roll float32
+                    writer.Write(euler.x);                                     // pitch float32
+                    writer.Write(euler.y);                                     // yaw float32
 
-                    // 16-byte Points: <fffBBBB (x, y, z, semantic, pad0, pad1, pad2)
+                    // 16-byte Points: <fffBBBB (x, y, z, semantic, intensity, pad1, pad2)
                     for (int i = chunkStart; i < chunkStart + chunkCount; i++)
                     {
                         RaycastHit hit = validHits[i];
 
-                        // Unity: X = East, Y = Up, Z = North -> ENU: X = East, Y = North, Z = Up
-                        Vector3 localHit = hit.point - sensorOrigin;
-                        float lx = localHit.x;
-                        float ly = localHit.z;
-                        float lz = localHit.y;
+                        // Send true WORLD surface hit coordinates: X = East, Y = North (Unity Z), Z = Up (Unity Y)
+                        float wx = hit.point.x;
+                        float wy = hit.point.z;
+                        float wz = hit.point.y;
 
                         // Match Python SemanticClass: 0=GROUND, 1=ROAD, 2=OBSTACLE, 3=BRIDGE, 4=BUILDING, 8=HOSTILE
                         byte semanticClass = 0; // Default Ground
@@ -182,9 +189,9 @@ namespace SIH.Perception
 
                         byte intensity = (byte)Mathf.Clamp((1.0f - (hit.distance / maxRangeMeters)) * 255f, 25f, 255f);
 
-                        writer.Write(lx);
-                        writer.Write(ly);
-                        writer.Write(lz);
+                        writer.Write(wx);
+                        writer.Write(wy);
+                        writer.Write(wz);
                         writer.Write(semanticClass);
                         writer.Write(intensity);
                         writer.Write((byte)0);

@@ -131,3 +131,11 @@ WGS84_FIRST_ECCENTRICITY_SQ_E2 = (2.0 * WGS84_FLATTENING_F) - (WGS84_FLATTENING_
 THREAT_GEOFENCE_RADIUS_M = 50.0
 NEAR_FIELD_STREAM_RATE_HZ = 20.0
 FAR_FIELD_STREAM_RATE_HZ = 0.5
+
+# ==============================================================================
+# 7. Watchdog Heartbeat & Real-Time Synchronization
+# ==============================================================================
+HEARTBEAT_UDP_PORT = 5005
+WATCHDOG_TIMEOUT_SEC = 0.25         # 250ms strict hardware safe-stop threshold
+HEARTBEAT_INTERVAL_SEC = 0.10       # 10 Hz broadcast
+HARDWARE_SERIAL_PORT = None         # Optional serial port (e.g. 'COM3' or '/dev/ttyUSB0')

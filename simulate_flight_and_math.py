@@ -240,6 +240,14 @@ class SquareVillageFlightSimulator:
         (h_a_pos, is_h_a_occl), (h_b_pos, is_h_b_occl) = self.compute_hostiles(t_seconds)
         hostiles = [(h_a_pos, is_h_a_occl), (h_b_pos, is_h_b_occl)]
 
+        # 3b. Broadcast 10 Hz Master Clock Heartbeat to Port 5005
+        if self.frame_id % 2 == 0:
+            hb_payload = json.dumps({"sim_time": round(t_seconds, 3)}).encode("utf-8")
+            try:
+                self.sock.sendto(hb_payload, (self.target_ip, 5005))
+            except Exception:
+                pass
+
         # 4. Generate Point Clouds
         uav_points = self.generate_uav_lidar_sweep(uav_pos, uav_yaw, hostiles)
         ugv_points = self.generate_ugv_lidar_sweep(ugv_pos, ugv_yaw, hostiles)

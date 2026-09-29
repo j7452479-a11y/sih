@@ -15,9 +15,15 @@ class SIHHeader:
     magic: bytes
     frame_id: int
     timestamp: float
-    sensor_type: int  # 1 = UAV, 2 = UGV, 3 = UWB
+    sensor_type: int  # 1 = UAV, 2 = UGV, 3 = Ego EV
     point_count: int
     checksum: int = 0
+    origin_x: float = 0.0
+    origin_y: float = 0.0
+    origin_z: float = 0.0
+    roll: float = 0.0
+    pitch: float = 0.0
+    yaw: float = 0.0
 
 # Fast NumPy structured dtype for 16-byte point payload
 POINT_DTYPE = np.dtype([
@@ -34,15 +40,24 @@ def unpack_sih1_packet(data: bytes) -> Tuple[SIHHeader, np.ndarray]:
     """
     Unpacks raw binary UDP datagram into SIHHeader and (N, 4) float32 numpy array:
     Columns: [x, y, z, semantic_class].
-    Supports both 25-byte header (with explicit magic) and 21-byte legacy header.
+    Supports:
+      - 49-byte SIH2 header (with 6-DOF origin & Euler angles)
+      - 25-byte SIH1 header
+      - 21-byte legacy header
     """
     if len(data) < 21:
-        raise ValueError(f"Datagram length {len(data)} is too small for SIH1 header")
+        raise ValueError(f"Datagram length {len(data)} is too small for SIH header")
 
-    # Check if magic prefix exists
-    if data[:4] == UDP_MAGIC_BYTES:
-        if len(data) < 25:
-            raise ValueError("Incomplete 25-byte header")
+    ox = oy = oz = roll = pitch = yaw = 0.0
+
+    # Check for SIH2 extended 49-byte header
+    if len(data) >= 49 and data[:4] == b"SIH2":
+        magic, frame_id, timestamp, sensor_type, point_count, checksum, ox, oy, oz, roll, pitch, yaw = struct.unpack_from(
+            "<4sIdBII6f", data, 0
+        )
+        payload_offset = 49
+    # Check for standard 25-byte SIH1 header
+    elif len(data) >= 25 and data[:4] == UDP_MAGIC_BYTES:
         magic, frame_id, timestamp, sensor_type, point_count, checksum = struct.unpack_from("<4sIdBII", data, 0)
         payload_offset = 25
     else:
@@ -58,6 +73,12 @@ def unpack_sih1_packet(data: bytes) -> Tuple[SIHHeader, np.ndarray]:
         sensor_type=sensor_type,
         point_count=point_count,
         checksum=checksum,
+        origin_x=float(ox),
+        origin_y=float(oy),
+        origin_z=float(oz),
+        roll=float(roll),
+        pitch=float(pitch),
+        yaw=float(yaw),
     )
 
     expected_payload_bytes = point_count * 16
@@ -91,21 +112,41 @@ def pack_sih1_packet(
     sensor_type: int,
     points: np.ndarray,  # (N, 3) or (N, 4)
     checksum: int = 0,
+    pose: Optional[Tuple[float, float, float, float, float, float]] = None,
 ) -> bytes:
     """
-    Packs point cloud into 25-byte binary datagram:
-    [4B magic][4B frame_id][8B timestamp][1B sensor_type][4B point_count][4B checksum] + N*16B
+    Packs point cloud into binary datagram:
+    If pose is provided: 49-byte SIH2 header [4sIdBII6f] + N*16B
+    If pose is None: 25-byte SIH1 header [4sIdBII] + N*16B
     """
     point_count = len(points)
-    header_bytes = struct.pack(
-        "<4sIdBII",
-        UDP_MAGIC_BYTES,
-        frame_id,
-        timestamp,
-        sensor_type,
-        point_count,
-        checksum,
-    )
+    if pose is not None:
+        ox, oy, oz, roll, pitch, yaw = pose
+        header_bytes = struct.pack(
+            "<4sIdBII6f",
+            b"SIH2",
+            frame_id,
+            timestamp,
+            sensor_type,
+            point_count,
+            checksum,
+            float(ox),
+            float(oy),
+            float(oz),
+            float(roll),
+            float(pitch),
+            float(yaw),
+        )
+    else:
+        header_bytes = struct.pack(
+            "<4sIdBII",
+            UDP_MAGIC_BYTES,
+            frame_id,
+            timestamp,
+            sensor_type,
+            point_count,
+            checksum,
+        )
 
     if point_count == 0:
         return header_bytes

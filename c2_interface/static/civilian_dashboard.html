@@ -1101,14 +1101,36 @@
             updateCockpitUI(pedX, pedOccluded, aebTriggered);
         }
 
-        function updateCockpitUI(pedX, pedOccluded, aebTriggered) {
-            document.getElementById('speedText').innerText = Math.round(civilianState.speed_kmh);
-            document.getElementById('pitchVal').innerText = (evGroup.rotation.x < 0 ? "-2.5°" : "+0.0°");
-            document.getElementById('ttcVal').innerText = aebTriggered ? `${civilianState.ttc_s.toFixed(1)} s` : "> 5.0 s";
+        let isBackendPaused = false;
+        async function checkBackendState() {
+            try {
+                const r = await fetch('/api/civilian_state');
+                if (r.ok) {
+                    const d = await r.json();
+                    isBackendPaused = !!d.simulation_paused;
+                }
+            } catch (e) {}
+        }
+        setInterval(checkBackendState, 100);
 
+        function updateCockpitUI(pedX, pedOccluded, aebTriggered) {
             const banner = document.getElementById('aebBanner');
             const title = document.getElementById('aebTitle');
             const desc = document.getElementById('aebDesc');
+
+            if (isBackendPaused) {
+                document.getElementById('speedText').innerText = "0";
+                document.getElementById('pitchVal').innerText = "-2.5°";
+                document.getElementById('ttcVal').innerText = "HALTED";
+                banner.className = "aeb-alert-banner danger";
+                title.innerText = "CRITICAL: SIMULATION PAUSED — HARDWARE SAFE-STOP";
+                desc.innerText = "Master Clock Heartbeat Dropped (>250ms). Physical Motors / Actuators Halted.";
+                return;
+            }
+
+            document.getElementById('speedText').innerText = Math.round(civilianState.speed_kmh);
+            document.getElementById('pitchVal').innerText = (evGroup.rotation.x < 0 ? "-2.5°" : "+0.0°");
+            document.getElementById('ttcVal').innerText = aebTriggered ? `${civilianState.ttc_s.toFixed(1)} s` : "> 5.0 s";
 
             if (aebTriggered) {
                 banner.className = "aeb-alert-banner danger";

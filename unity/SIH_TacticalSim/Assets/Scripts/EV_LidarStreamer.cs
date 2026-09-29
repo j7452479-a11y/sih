@@ -6,6 +6,7 @@
 
 using System;
 using System.IO;
+using System.Collections.Generic;
 using System.Net.Sockets;
 using Unity.Collections;
 using UnityEngine;
@@ -75,67 +76,93 @@ namespace SIH.Civilian
             Unity.Jobs.JobHandle handle = RaycastCommand.ScheduleBatch(commands, results, 32);
             handle.Complete();
 
-            // Serialize to SIH1 Binary Format
-            using (MemoryStream ms = new MemoryStream())
-            using (BinaryWriter writer = new BinaryWriter(ms))
+            List<RaycastHit> validHits = new List<RaycastHit>();
+            for (int i = 0; i < totalBeams; i++)
             {
-                float originX = sensorOrigin.x;
-                float originY = sensorOrigin.z; // Unity Z -> World Northing
-                float originZ = sensorOrigin.y; // Unity Y -> World Up
+                if (results[i].collider != null) validHits.Add(results[i]);
+            }
 
-                double unixTs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() / 1000.0;
+            Vector3 euler = transform.rotation.eulerAngles;
+            double unixTs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() / 1000.0;
 
-                int validHits = 0;
-                for (int i = 0; i < totalBeams; i++)
+            // Stream packets in chunks of up to 80 points to guarantee < 1500B MTU
+            for (int chunkStart = 0; chunkStart < validHits.Count && chunkStart < 800; chunkStart += 80)
+            {
+                int chunkCount = Mathf.Min(80, validHits.Count - chunkStart);
+
+                using (MemoryStream ms = new MemoryStream())
+                using (BinaryWriter writer = new BinaryWriter(ms))
                 {
-                    if (results[i].collider != null) validHits++;
-                }
-                int packetPointCount = Mathf.Min(validHits, 80);
+                    // 49-byte SIH2 Header: <4sIdBII6f
+                    writer.Write(System.Text.Encoding.ASCII.GetBytes("SIH2"));
+                    writer.Write(frameId);
+                    writer.Write(unixTs);
+                    writer.Write(sensorType); // 3 = Ego EV
+                    writer.Write((uint)chunkCount);
+                    writer.Write((uint)0); // Checksum
+                    writer.Write(sensorOrigin.x);
+                    writer.Write(sensorOrigin.z); // ENU Y (Northing)
+                    writer.Write(sensorOrigin.y); // ENU Z (Up)
+                    writer.Write(euler.z);        // Roll
+                    writer.Write(euler.x);        // Pitch (nose dive under braking)
+                    writer.Write(euler.y);        // Yaw
 
-                // 25-byte SIH1 Header
-                writer.Write(System.Text.Encoding.ASCII.GetBytes("SIH1"));
-                writer.Write(frameId);
-                writer.Write(unixTs);
-                writer.Write(sensorType);
-                writer.Write(packetPointCount);
-                writer.Write((uint)0); // Checksum
+                    // 16-byte Points: sensor local frame for server SE(3) compensation
+                    for (int i = chunkStart; i < chunkStart + chunkCount; i++)
+                    {
+                        RaycastHit hit = validHits[i];
 
-                // 16-byte Points [X, Y, Z, semantic, pad0, pad1, pad2]
-                int written = 0;
-                for (int i = 0; i < totalBeams && written < packetPointCount; i++)
-                {
-                    RaycastHit hit = results[i];
-                    if (hit.collider == null) continue;
+                        // Transform into sensor-local coordinates
+                        Vector3 localHit = Quaternion.Inverse(transform.rotation) * (hit.point - sensorOrigin);
+                        float lx = localHit.x; // lateral / right
+                        float ly = localHit.z; // longitudinal / forward
+                        float lz = localHit.y; // vertical / up
 
-                    Vector3 hitPt = hit.point;
-                    byte semanticClass = 1; // Default Road
+                        byte semanticClass = 1; // Default Road
+                        int layer = hit.collider.gameObject.layer;
+                        string hitName = hit.collider.gameObject.name;
 
-                    int layer = hit.collider.gameObject.layer;
-                    if (layer == LayerMask.NameToLayer("Road")) semanticClass = 1;
-                    else if (layer == LayerMask.NameToLayer("Curb")) semanticClass = 5;
-                    else if (layer == LayerMask.NameToLayer("Obstacle")) semanticClass = 2;
-                    else if (layer == LayerMask.NameToLayer("Building")) semanticClass = 4;
-                    else if (layer == LayerMask.NameToLayer("Pedestrian") || layer == LayerMask.NameToLayer("Hostile")) semanticClass = 8; // VRU target
+                        if (layer == LayerMask.NameToLayer("Pedestrian") || layer == LayerMask.NameToLayer("Hostile") || hitName.Contains("Pedestrian") || hitName.Contains("VRU"))
+                        {
+                            semanticClass = 8; // VRU target
+                        }
+                        else if (layer == LayerMask.NameToLayer("Curb") || hitName.Contains("Curb"))
+                        {
+                            semanticClass = 5;
+                        }
+                        else if (layer == LayerMask.NameToLayer("Building") || hitName.Contains("Underpass") || hitName.Contains("Pillar") || hitName.Contains("Ceiling"))
+                        {
+                            semanticClass = 4;
+                        }
+                        else if (layer == LayerMask.NameToLayer("Obstacle") || hitName.Contains("Van"))
+                        {
+                            semanticClass = 2;
+                        }
+                        else if (layer == LayerMask.NameToLayer("Road") || hitName.Contains("Road"))
+                        {
+                            semanticClass = 1;
+                        }
 
-                    writer.Write(hitPt.x);
-                    writer.Write(hitPt.z); // ENU Y (Northing)
-                    writer.Write(hitPt.y); // ENU Z (Up)
-                    writer.Write(semanticClass);
-                    writer.Write((byte)0);
-                    writer.Write((byte)0);
-                    writer.Write((byte)0);
+                        byte intensity = (byte)Mathf.Clamp((1.0f - (hit.distance / maxRangeMeters)) * 255f, 25f, 255f);
 
-                    written++;
-                }
+                        writer.Write(lx);
+                        writer.Write(ly);
+                        writer.Write(lz);
+                        writer.Write(semanticClass);
+                        writer.Write(intensity);
+                        writer.Write((byte)0);
+                        writer.Write((byte)0);
+                    }
 
-                byte[] dgram = ms.ToArray();
-                try
-                {
-                    udpClient.Send(dgram, dgram.Length, targetIp, targetPort);
-                }
-                catch
-                {
-                    // Non-blocking UDP transport
+                    byte[] dgram = ms.ToArray();
+                    try
+                    {
+                        udpClient.Send(dgram, dgram.Length, targetIp, targetPort);
+                    }
+                    catch
+                    {
+                        // Non-blocking UDP transport
+                    }
                 }
             }
 

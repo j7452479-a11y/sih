@@ -5,6 +5,7 @@ FastAPI C2 Server, 20 Hz WebSocket Hub & Return Telemetry Loop
 
 import asyncio
 import json
+import math
 import os
 import socket
 import sys
@@ -12,6 +13,15 @@ import time
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Dict, List, Optional, Set
+
+def safe_num(val, default=0.0, ndigits=2):
+    try:
+        f = float(val)
+        if math.isnan(f) or math.isinf(f):
+            return default
+        return round(f, ndigits)
+    except Exception:
+        return default
 
 # Ensure project root is in sys.path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -53,9 +63,11 @@ from tracking.tier_dbscan import TierDBSCAN
 try:
     from .cot_formatter import CoTFormatter, WGS84Converter
     from .geofence_router import GeofenceRouter
+    from .watchdog import WatchdogMonitor
 except ImportError:
     from c2_interface.cot_formatter import CoTFormatter, WGS84Converter
     from c2_interface.geofence_router import GeofenceRouter
+    from c2_interface.watchdog import WatchdogMonitor
 
 # Global Engine Pipeline State
 grid_engine = FoveatedGrid()
@@ -66,6 +78,7 @@ jitter_buffer = TemporalJitterBuffer()
 wgs84_conv = WGS84Converter()
 cot_formatter = CoTFormatter(wgs84_conv)
 geofence_router = GeofenceRouter()
+watchdog = WatchdogMonitor()
 
 # Performance telemetry counters
 frame_counter = 0
@@ -108,14 +121,17 @@ def on_udp_packet_received(header: SIHHeader, points: np.ndarray):
 
     # Direct dispatch for Civilian EV Ego-Vehicle sweeps (sensor_type == 3)
     if getattr(header, 'sensor_type', 1) == 3:
-        process_civilian_ev_sweep(header, points)
-        last_latency_ms = (time.perf_counter() - t_start) * 1000.0
-        frame_counter += 1
-        now = time.time()
-        if now - last_fps_time >= 1.0:
-            current_fps = frame_counter / (now - last_fps_time)
-            frame_counter = 0
-            last_fps_time = now
+        sweep = jitter_buffer.push_chunk(header, points)
+        if sweep is not None:
+            full_hdr, full_pts = sweep
+            process_civilian_ev_sweep(full_hdr, full_pts)
+            last_latency_ms = (time.perf_counter() - t_start) * 1000.0
+            frame_counter += 1
+            now = time.time()
+            if now - last_fps_time >= 1.0:
+                current_fps = frame_counter / (now - last_fps_time)
+                frame_counter = 0
+                last_fps_time = now
         return
 
     # Tactical MUM-T Swarm (UAV=1, UGV=2): pair in jitter buffer
@@ -131,11 +147,37 @@ def on_udp_packet_received(header: SIHHeader, points: np.ndarray):
             frame_counter = 0
             last_fps_time = now
 
+def euler_to_rot_matrix(roll_deg: float, pitch_deg: float, yaw_deg: float) -> np.ndarray:
+    """Computes 3x3 rotation matrix from Euler angles (Roll, Pitch, Yaw in degrees)."""
+    r = np.radians(roll_deg)
+    p = np.radians(pitch_deg)
+    y = np.radians(yaw_deg)
+
+    R_x = np.array([
+        [1.0, 0.0, 0.0],
+        [0.0, np.cos(r), -np.sin(r)],
+        [0.0, np.sin(r), np.cos(r)]
+    ], dtype=np.float32)
+
+    R_y = np.array([
+        [np.cos(p), 0.0, np.sin(p)],
+        [0.0, 1.0, 0.0],
+        [-np.sin(p), 0.0, np.cos(p)]
+    ], dtype=np.float32)
+
+    R_z = np.array([
+        [np.cos(y), -np.sin(y), 0.0],
+        [np.sin(y), np.cos(y), 0.0],
+        [0.0, 0.0, 1.0]
+    ], dtype=np.float32)
+
+    return R_z @ R_y @ R_x
+
 def process_synchronized_sweep(pair: SyncedFramePair):
     """Executes full edge perception cycle across synchronized UAV and UGV sweeps."""
     global last_uav_pose, last_ugv_pose, last_tether_length, last_tether_status
 
-    # Safely extract or estimate sensor poses from datagrams
+    # Safely extract live sensor poses directly from SIH2 datagrams
     uav_x = getattr(pair.uav_header, 'origin_x', float(np.mean(pair.uav_points[:, 0])) if len(pair.uav_points) > 0 else -40.0)
     uav_y = getattr(pair.uav_header, 'origin_y', float(np.mean(pair.uav_points[:, 1])) if len(pair.uav_points) > 0 else -40.0)
     uav_z = getattr(pair.uav_header, 'origin_z', 30.0)
@@ -213,15 +255,18 @@ def send_unity_return_telemetry(tracks):
     """Sends JSON target coordinates and designated structure to Port 5003 for Unity Soldier Visor Reticle."""
     payload = {
         "timestamp": time.time(),
+        "status": "SIMULATION_PAUSED_HARDWARE_HALT" if watchdog.is_paused else "NOMINAL",
+        "simulation_paused": watchdog.is_paused,
+        "emergency_stop": watchdog.is_paused,
         "targets": [
             {
                 "id": t.track_id,
                 "x": round(t.position_3d[0], 2),
                 "y": round(t.position_3d[1], 2),
                 "z": round(t.position_3d[2], 2),
-                "speed": round(t.speed, 2),
+                "speed": 0.0 if watchdog.is_paused else round(t.speed, 2),
                 "heading": round(t.heading_deg, 1),
-                "state": t.state.name,
+                "state": "HALTED" if watchdog.is_paused else t.state.name,
             }
             for t in tracks
         ],
@@ -229,7 +274,7 @@ def send_unity_return_telemetry(tracks):
         "uav_pose": last_uav_pose,
         "ugv_pose": last_ugv_pose,
         "tether_length_m": last_tether_length,
-        "tether_status": last_tether_status,
+        "tether_status": "HALTED" if watchdog.is_paused else last_tether_status,
     }
     try:
         data = json.dumps(payload).encode("utf-8")
@@ -240,21 +285,28 @@ def send_unity_return_telemetry(tracks):
 
 def send_civilian_return_telemetry(tracks, aeb_triggered: bool):
     """Sends JSON target coordinates and AEB status to Port 5003 for EV_AutonomousController.cs."""
-    if len(tracks) > 0:
-        closest = tracks[0]
-        payload = {
-            "track_id": closest.track_id,
-            "pos_world": [closest.position_3d[0] * 100.0, closest.position_3d[1] * 100.0, closest.position_3d[2] * 100.0],
-            "velocity_world": [closest.velocity[0], closest.velocity[1]],
-            "status": "EMERGENCY_STOP" if aeb_triggered else "NOMINAL"
-        }
-    else:
-        payload = {
-            "track_id": 0,
-            "pos_world": [0.0, 0.0, 0.0],
-            "velocity_world": [0.0, 0.0],
-            "status": "NOMINAL"
-        }
+    is_halted = aeb_triggered or watchdog.is_paused
+    status_str = "SIMULATION_PAUSED_HARDWARE_HALT" if watchdog.is_paused else ("EMERGENCY_STOP" if aeb_triggered else "NOMINAL")
+    payload = {
+        "timestamp": time.time(),
+        "status": status_str,
+        "simulation_paused": watchdog.is_paused,
+        "emergency_stop": is_halted,
+        "targets": [
+            {
+                "id": t.track_id,
+                "x": round(float(t.position_3d[0]), 2),
+                "y": round(float(t.position_3d[1]), 2),
+                "z": round(float(t.position_3d[2]), 2),
+                "speed": 0.0 if is_halted else round(float(t.speed), 2),
+                "heading": round(float(t.heading_deg), 1),
+                "state": "HALTED" if is_halted else t.state.name,
+            }
+            for t in tracks
+        ],
+        "uav_pose": [0.0, 0.0, 0.0],
+        "ugv_pose": [0.0, 0.0, 0.0],
+    }
     try:
         data = json.dumps(payload).encode("utf-8")
         return_socket.sendto(data, (DEFAULT_RETURN_IP, TELEMETRY_RETURN_PORT))
@@ -294,27 +346,12 @@ def process_civilian_ev_sweep(header: SIHHeader, points: np.ndarray):
         return
 
     # 1. SE(3) Coordinate Transformation: Sensor Local Frame -> Global Navigation Frame
-    pitch_rad = np.radians(ev_pitch)
-    yaw_rad = np.radians(ev_yaw)
-    cos_p, sin_p = np.cos(pitch_rad), np.sin(pitch_rad)
-    cos_y, sin_y = np.cos(yaw_rad), np.sin(yaw_rad)
-
-    R_pitch = np.array([
-        [1.0, 0.0, 0.0],
-        [0.0, cos_p, -sin_p],
-        [0.0, sin_p, cos_p]
-    ], dtype=np.float32)
-
-    R_yaw = np.array([
-        [cos_y, -sin_y, 0.0],
-        [sin_y, cos_y, 0.0],
-        [0.0, 0.0, 1.0]
-    ], dtype=np.float32)
-
-    R_ego = R_yaw @ R_pitch
-
-    local_xyz = points[:, :3]
-    world_xyz = (local_xyz @ R_ego.T) + np.array([ev_x, ev_y, ev_z], dtype=np.float32)
+    if getattr(header, 'magic', b'') == b"SIH2":
+        R_ego = euler_to_rot_matrix(getattr(header, 'roll', 0.0), ev_pitch, ev_yaw)
+        local_xyz = points[:, :3]
+        world_xyz = (local_xyz @ R_ego.T) + np.array([ev_x, ev_y, ev_z], dtype=np.float32)
+    else:
+        world_xyz = points[:, :3]
 
     # Format into (N, 4) tensor [X, Y, Z, SemanticClass]
     sem_col = points[:, 3:4] if points.shape[1] >= 4 else np.ones((len(points), 1), dtype=np.float32)
@@ -364,7 +401,7 @@ def process_civilian_ev_sweep(header: SIHHeader, points: np.ndarray):
 
     for t in active_tracks:
         px, py, pz = t.position_3d
-        vx, vy = t.velocity[0], t.velocity[1]
+        vx, vy = t.velocity_2d[0], t.velocity_2d[1]
         dx = px - ev_x
         dy = py - ev_y
 
@@ -389,14 +426,14 @@ def process_civilian_ev_sweep(header: SIHHeader, points: np.ndarray):
 
         ped_track_summaries.append({
             "id": t.track_id,
-            "x": round(float(px), 2),
-            "y": round(float(py), 2),
-            "z": round(float(pz), 2),
-            "vx": round(float(vx), 2),
-            "vy": round(float(vy), 2),
-            "speed": round(float(t.speed), 2),
-            "ttc_s": round(float(ttc), 2),
-            "state": t.state.name
+            "x": safe_num(px, ndigits=2),
+            "y": safe_num(py, ndigits=2),
+            "z": safe_num(pz, ndigits=2),
+            "vx": safe_num(vx, ndigits=2),
+            "vy": safe_num(vy, ndigits=2),
+            "speed": safe_num(t.speed, ndigits=2),
+            "ttc_s": safe_num(ttc, default=99.9, ndigits=2),
+            "state": str(t.state.name)
         })
 
     last_ev_ttc_s = min_ttc
@@ -446,6 +483,8 @@ async def broadcast_telemetry_loop():
                 c2_msg = json.dumps({
                     "type": "C2_UPDATE",
                     "timestamp": time.time(),
+                    "simulation_paused": watchdog.is_paused,
+                    "watchdog": watchdog.get_state(),
                     "fps": round(current_fps, 1),
                     "latency_ms": round(last_latency_ms, 2),
                     "ram_mb": live_ram_mb,
@@ -455,6 +494,17 @@ async def broadcast_telemetry_loop():
                     "ugv_pose": last_ugv_pose,
                     "tether_length_m": last_tether_length,
                     "tether_status": last_tether_status,
+                    "ev_state": {
+                        "ego_pose": last_ev_pose,
+                        "speed_mps": 0.0 if watchdog.is_paused else round(last_ev_speed, 2),
+                        "speed_kmh": 0.0 if watchdog.is_paused else round(last_ev_speed * 3.6, 1),
+                        "aeb_status": "SIMULATION_PAUSED_HARDWARE_HALT" if watchdog.is_paused else last_ev_aeb_status,
+                        "ttc_s": round(last_ev_ttc_s, 2),
+                        "overhead_clearance_m": round(last_ev_underpass_clearance_m, 2),
+                        "clearance_safe": last_ev_clearance_safe,
+                        "corridor_length_m": round(last_ev_corridor_length, 2),
+                        "pedestrian_tracks": last_pedestrian_tracks,
+                    },
                     "cells": cells_data,
                     "tracks": [
                         {
@@ -462,12 +512,12 @@ async def broadcast_telemetry_loop():
                             "x": round(t.position_3d[0], 2),
                             "y": round(t.position_3d[1], 2),
                             "z": round(t.position_3d[2], 2),
-                            "vx": round(t.velocity_2d[0], 2),
-                            "vy": round(t.velocity_2d[1], 2),
-                            "speed": round(t.speed, 2),
+                            "vx": 0.0 if watchdog.is_paused else round(t.velocity_2d[0], 2),
+                            "vy": 0.0 if watchdog.is_paused else round(t.velocity_2d[1], 2),
+                            "speed": 0.0 if watchdog.is_paused else round(t.speed, 2),
                             "heading": round(t.heading_deg, 1),
                             "provenance": t.provenance.name,
-                            "state": t.state.name,
+                            "state": "HALTED" if watchdog.is_paused else t.state.name,
                         }
                         for t in confirmed_tracks
                     ]
@@ -487,6 +537,8 @@ async def broadcast_telemetry_loop():
                 soldier_msg = json.dumps({
                     "type": "SOLDIER_UPDATE",
                     "timestamp": time.time(),
+                    "simulation_paused": watchdog.is_paused,
+                    "watchdog": watchdog.get_state(),
                     "threats": soldier_tracks,
                     "designated_structure": current_designated_structure,
                     "uav_pose": last_uav_pose,
@@ -519,12 +571,17 @@ async def lifespan(app: FastAPI):
     await uav_receiver.start()
     await ugv_receiver.start()
 
+    # Start Simulation Master Clock Watchdog on Port 5005
+    watchdog_task = asyncio.create_task(watchdog.monitor_loop())
+
     # Start 20 Hz WebSocket broadcast background task
     broadcast_task = asyncio.create_task(broadcast_telemetry_loop())
 
     yield
 
     broadcast_task.cancel()
+    watchdog_task.cancel()
+    watchdog.close()
     uav_receiver.stop()
     ugv_receiver.stop()
     return_socket.close()
@@ -574,26 +631,42 @@ def get_civilian_dashboard():
 
 @app.get("/api/civilian_state")
 def get_civilian_state():
+    safe_pose = {
+        k: safe_num(v, default=0.0, ndigits=2) if isinstance(v, (int, float)) else v
+        for k, v in last_ev_pose.items()
+    }
+    safe_peds = []
+    for p in last_pedestrian_tracks:
+        safe_peds.append({
+            k: safe_num(v, default=0.0, ndigits=2) if isinstance(v, (int, float)) else v
+            for k, v in p.items()
+        })
+    speed_mps = 0.0 if watchdog.is_paused else last_ev_speed
+    aeb_stat = "SIMULATION_PAUSED_HARDWARE_HALT" if watchdog.is_paused else str(last_ev_aeb_status)
     return {
         "status": "OPERATIONAL",
-        "ego_pose": last_ev_pose,
-        "speed_mps": round(last_ev_speed, 2),
-        "speed_kmh": round(last_ev_speed * 3.6, 1),
-        "aeb_status": last_ev_aeb_status,
-        "ttc_s": round(last_ev_ttc_s, 2),
-        "overhead_clearance_m": round(last_ev_underpass_clearance_m, 2),
-        "clearance_safe": last_ev_clearance_safe,
-        "corridor_length_m": round(last_ev_corridor_length, 2),
-        "corridor_width_m": EV_CORRIDOR_WIDTH_M,
-        "pedestrian_tracks": last_pedestrian_tracks,
-        "fps": round(current_fps, 1),
-        "latency_ms": round(last_latency_ms, 2)
+        "simulation_paused": watchdog.is_paused,
+        "watchdog": watchdog.get_state(),
+        "ego_pose": safe_pose,
+        "speed_mps": safe_num(speed_mps, ndigits=2),
+        "speed_kmh": safe_num(speed_mps * 3.6, ndigits=1),
+        "aeb_status": aeb_stat,
+        "ttc_s": safe_num(last_ev_ttc_s, default=99.9, ndigits=2),
+        "overhead_clearance_m": safe_num(last_ev_underpass_clearance_m, default=3.2, ndigits=2),
+        "clearance_safe": bool(last_ev_clearance_safe),
+        "corridor_length_m": safe_num(last_ev_corridor_length, default=25.0, ndigits=2),
+        "corridor_width_m": safe_num(EV_CORRIDOR_WIDTH_M, default=3.6, ndigits=2),
+        "pedestrian_tracks": safe_peds,
+        "fps": safe_num(current_fps, default=20.0, ndigits=1),
+        "latency_ms": safe_num(last_latency_ms, default=4.0, ndigits=2),
     }
 
 @app.get("/api/status")
 def get_status():
     return {
         "status": "OPERATIONAL",
+        "simulation_paused": watchdog.is_paused,
+        "watchdog": watchdog.get_state(),
         "fps": round(current_fps, 1),
         "latency_ms": round(last_latency_ms, 2),
         "foveated_mls_ram_mb": peak_ram_mb,
@@ -603,6 +676,28 @@ def get_status():
         "total_intervals": mls_engine.get_total_interval_count(),
         "active_tracks": len(mtt_engine.get_confirmed_tracks()),
     }
+
+@app.get("/api/watchdog")
+def get_watchdog_state():
+    """Returns real-time Simulation Master Clock Watchdog and Hardware Status."""
+    return watchdog.get_state()
+
+@app.post("/api/watchdog/test_pause")
+def post_watchdog_test_pause():
+    """Forces an immediate watchdog timeout to demonstrate hardware safe-stop."""
+    watchdog.last_heartbeat = time.time() - (watchdog.timeout_sec * 2.0)
+    return {"status": "TEST_PAUSE_TRIGGERED", "watchdog": watchdog.get_state()}
+
+@app.post("/api/watchdog/test_resume")
+def post_watchdog_test_resume():
+    """Simulates a simulation unpause / heartbeat reception for testing."""
+    watchdog.last_heartbeat = time.time()
+    if watchdog.is_paused:
+        watchdog.is_paused = False
+        watchdog.trigger_hardware_resume()
+        print("[WATCHDOG] Simulation Resumed via API. Hardware Live.")
+        sys.stdout.flush()
+    return {"status": "TEST_RESUME_TRIGGERED", "watchdog": watchdog.get_state()}
 
 @app.get("/api/tracks")
 def get_tracks():

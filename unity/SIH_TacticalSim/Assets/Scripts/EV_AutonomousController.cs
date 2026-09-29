@@ -29,6 +29,9 @@ namespace SIH.Civilian
     public class TelemetryPayload
     {
         public double timestamp;
+        public string status;
+        public bool simulation_paused;
+        public bool emergency_stop;
         public TargetEntry[] targets;
         public float[] uav_pose;
         public float[] ugv_pose;
@@ -65,7 +68,10 @@ namespace SIH.Civilian
 
             try
             {
-                listener = new UdpClient(telemetryPort);
+                var client = new UdpClient();
+                client.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
+                client.Client.Bind(new IPEndPoint(IPAddress.Any, telemetryPort));
+                listener = client;
                 groupEP = new IPEndPoint(IPAddress.Any, telemetryPort);
                 listener.BeginReceive(new AsyncCallback(OnTelemetryReceived), null);
             }
@@ -83,13 +89,23 @@ namespace SIH.Civilian
                 string json = Encoding.UTF8.GetString(bytes);
                 TelemetryPayload payload = JsonUtility.FromJson<TelemetryPayload>(json);
 
-                if (payload != null && payload.targets != null)
+                if (payload != null)
                 {
-                    foreach (var target in payload.targets)
+                    // Watchdog simulation pause or hardware emergency halt
+                    if (payload.simulation_paused || payload.emergency_stop || payload.status == "SIMULATION_PAUSED_HARDWARE_HALT")
                     {
-                        // Convert ENU (X: East, Y: North, Z: Up) -> Unity (X: East, Y: Up, Z: North)
-                        Vector3 targetPos = new Vector3(target.x, target.z, target.y);
-                        EvaluateBrakingCorridor(targetPos);
+                        emergencyStopActive = true;
+                        stopTimeout = 0.5f;
+                    }
+
+                    if (payload.targets != null)
+                    {
+                        foreach (var target in payload.targets)
+                        {
+                            // Convert ENU (X: East, Y: North, Z: Up) -> Unity (X: East, Y: Up, Z: North)
+                            Vector3 targetPos = new Vector3(target.x, target.z, target.y);
+                            EvaluateBrakingCorridor(targetPos);
+                        }
                     }
                 }
 
@@ -124,18 +140,21 @@ namespace SIH.Civilian
         {
             if (emergencyStopActive)
             {
-                if (agent != null)
+                if (agent != null && agent.isOnNavMesh)
                 {
                     agent.speed = 0f;
                     agent.isStopped = true;
                 }
+
+                // Tilt vehicle nose-down under emergency braking (-2.5 deg)
+                transform.localRotation = Quaternion.Slerp(transform.localRotation, Quaternion.Euler(-2.5f, 0f, 0f), Time.deltaTime * 8f);
 
                 stopTimeout -= Time.deltaTime;
                 if (stopTimeout <= 0f)
                 {
                     // Pedestrian has cleared corridor; resume cruise
                     emergencyStopActive = false;
-                    if (agent != null)
+                    if (agent != null && agent.isOnNavMesh)
                     {
                         agent.isStopped = false;
                         agent.speed = normalSpeed;
@@ -144,10 +163,25 @@ namespace SIH.Civilian
             }
             else
             {
-                // Loop waypoint navigation if reached
-                if (agent != null && pathTarget != null && !agent.pathPending && agent.remainingDistance < 1.5f)
+                // Level vehicle back to horizontal
+                transform.localRotation = Quaternion.Slerp(transform.localRotation, Quaternion.identity, Time.deltaTime * 6f);
+
+                // Waypoint navigation
+                if (agent != null && agent.isOnNavMesh)
                 {
-                    agent.SetDestination(pathTarget.position);
+                    if (pathTarget != null && !agent.pathPending && agent.remainingDistance < 1.5f)
+                    {
+                        agent.SetDestination(pathTarget.position);
+                    }
+                }
+                else if (pathTarget != null)
+                {
+                    // Direct transform translation along road
+                    transform.position = Vector3.MoveTowards(transform.position, pathTarget.position, normalSpeed * Time.deltaTime);
+                    if (Vector3.Distance(transform.position, pathTarget.position) < 1.5f)
+                    {
+                        transform.position = new Vector3(0f, 0.6f, -35.0f);
+                    }
                 }
             }
         }

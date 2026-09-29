@@ -276,7 +276,7 @@
   <header>
     <div class="brand">
       <span>TACTICAL PERCEPTION ENGINE</span>
-      <span class="badge-live">LIVE 20 HZ</span>
+      <span class="badge-live" id="liveBadge">LIVE 20 HZ</span>
     </div>
     <div class="header-stats">
       <div class="stat-item">
@@ -626,6 +626,21 @@
           document.getElementById('hudCells').innerText = msg.cell_count;
           document.getElementById('trackCountBadge').innerText = tracksData.length;
           renderHostileList(tracksData);
+
+          const badge = document.getElementById('liveBadge');
+          if (badge) {
+            if (msg.simulation_paused) {
+              badge.innerText = "CRITICAL: SIMULATION PAUSED - HARDWARE HALTED";
+              badge.style.background = "rgba(255, 23, 68, 0.35)";
+              badge.style.color = "#ff1744";
+              badge.style.borderColor = "#ff1744";
+            } else {
+              badge.innerText = "LIVE 20 HZ";
+              badge.style.background = "rgba(0, 255, 136, 0.15)";
+              badge.style.color = "var(--accent-green)";
+              badge.style.borderColor = "var(--accent-green)";
+            }
+          }
         }
       } catch (err) {}
     };

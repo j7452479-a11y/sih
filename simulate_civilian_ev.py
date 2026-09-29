@@ -12,6 +12,7 @@ import os
 import sys
 import time
 import math
+import json
 import struct
 import socket
 import argparse
@@ -42,6 +43,11 @@ class CivilianEVSimulator:
         self.rx_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.rx_socket.bind(("0.0.0.0", TELEMETRY_RETURN_PORT))
         self.rx_socket.setblocking(False)
+
+        # Simulation Master Clock Heartbeat Broadcaster (UDP Port 5005)
+        self.heartbeat_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.heartbeat_timer = 0.0
+        self.is_paused = False
 
         # Vehicle State
         self.ego_x = 0.0
@@ -76,15 +82,31 @@ class CivilianEVSimulator:
 
     def step_physics(self, dt: float):
         """Advances vehicle and dynamic pedestrian trajectories."""
-        # 1. Process inbound AEB controller telemetry
+        # 0. Transmit 10 Hz Simulation Master Clock Heartbeat to Port 5005
+        self.heartbeat_timer += dt
+        if not self.is_paused and self.heartbeat_timer >= 0.10:
+            self.heartbeat_timer = 0.0
+            sim_time = self.frame_id * dt
+            payload = json.dumps({"sim_time": round(sim_time, 3)}).encode("utf-8")
+            try:
+                self.heartbeat_socket.sendto(payload, (self.target_ip, 5005))
+            except Exception:
+                pass
+
+        if self.is_paused:
+            self.speed = 0.0
+            return
+
+        # 1. Process inbound AEB & Watchdog controller telemetry
         try:
             while True:
                 data, _ = self.rx_socket.recvfrom(2048)
-                import json
                 payload = json.loads(data.decode("utf-8"))
-                if payload.get("status") == "EMERGENCY_STOP":
+                status = payload.get("status", "")
+                sim_paused = payload.get("simulation_paused", False)
+                if status in ("EMERGENCY_STOP", "SIMULATION_PAUSED_HARDWARE_HALT") or sim_paused or payload.get("emergency_stop"):
                     self.aeb_active = True
-                elif payload.get("status") == "NOMINAL":
+                elif status == "NOMINAL":
                     self.aeb_active = False
         except BlockingIOError:
             pass
@@ -229,33 +251,32 @@ class CivilianEVSimulator:
         sensor_type = 3  # 3 = CIVILIAN_EV_EGO
         reserved = 0
 
-        # Header: Magic(4s) + Frame(I) + Ts(d) + Type(B) + Count(i) + OriginXYZ(3f) + RollPitchYaw(3f) + Reserved(I)
-        # Pack to 40-byte binary header
+        # Header: Magic(4s) + Frame(I) + Ts(d) + Type(B) + Count(I) + Checksum(I) + OriginXYZ(3f) + RollPitchYaw(3f)
+        # Pack 49-byte binary SIH2 header in little-endian format
         header_bytes = struct.pack(
-            "!4sIdBiffffffI",
-            b"SIH1",
+            "<4sIdBII6f",
+            b"SIH2",
             self.frame_id,
             unix_ts,
             sensor_type,
             num_points,
+            0,
             float(self.ego_x),
             float(self.ego_y),
             float(self.ego_z + EV_LIDAR_HEIGHT_M),
             0.0,
             float(self.pitch_deg),
             float(self.yaw_deg),
-            reserved
         )
 
-        # 16-byte points: X(f) + Y(f) + Z(f) + Semantic(H) + Intensity(B) + ReturnIdx(B)
+        # 16-byte points: X(<f) + Y(<f) + Z(<f) + Semantic(u1) + Pad(3u1)
         point_records = bytearray()
         for i in range(num_points):
             pt = points[i]
             x, y, z = float(pt[0]), float(pt[1]), float(pt[2])
             sem = int(pt[3])
             intensity = int(pt[4]) if len(pt) >= 5 else 180
-            ret_idx = 1
-            point_records.extend(struct.pack("!fffHBB", x, y, z, sem, intensity, ret_idx))
+            point_records.extend(struct.pack("<fffBBBB", x, y, z, sem, intensity, 0, 0))
 
         datagram = header_bytes + point_records
         try:
@@ -266,6 +287,10 @@ class CivilianEVSimulator:
     def close(self):
         self.tx_socket.close()
         self.rx_socket.close()
+        try:
+            self.heartbeat_socket.close()
+        except Exception:
+            pass
 
 
 def run_simulation(duration_s: float = 60.0, fps: float = 20.0, verbose: bool = True):
