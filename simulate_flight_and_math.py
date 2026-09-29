@@ -255,12 +255,12 @@ class SquareVillageFlightSimulator:
         # 5. Pack & Stream to UDP Ports 5001 & 5002 (1-to-1 synchronized frame transmission)
         if len(uav_points) > 0:
             chunk_uav = uav_points[:80, :4]
-            uav_pkt = pack_sih1_packet(self.frame_id, ts, 1, chunk_uav)
+            uav_pkt = pack_sih1_packet(self.frame_id, ts, 1, chunk_uav, checksum=1)
             self.sock.sendto(uav_pkt, (self.target_ip, UAV_UDP_PORT))
 
         if len(ugv_points) > 0:
             chunk_ugv = ugv_points[:80, :4]
-            ugv_pkt = pack_sih1_packet(self.frame_id, ts + 0.002, 2, chunk_ugv)
+            ugv_pkt = pack_sih1_packet(self.frame_id, ts + 0.002, 2, chunk_ugv, checksum=1)
             self.sock.sendto(ugv_pkt, (self.target_ip, UGV_UDP_PORT))
 
         # 6. Stream JSON Telemetry to Port 5003 for Unity Reticle HUD (Soldier & Commander POVs)

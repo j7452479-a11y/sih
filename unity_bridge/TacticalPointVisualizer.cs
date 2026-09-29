@@ -48,8 +48,15 @@ namespace SIH.Perception
             shape.enabled = false;
 
             var renderer = GetComponent<ParticleSystemRenderer>();
-            renderer.material = new Material(Shader.Find("Universal Render Pipeline/Unlit") ?? Shader.Find("Unlit/Color"));
-            renderer.material.color = Color.white;
+            Shader pShader = Shader.Find("Universal Render Pipeline/Unlit") 
+                          ?? Shader.Find("Universal Render Pipeline/Particles/Unlit") 
+                          ?? Shader.Find("Sprites/Default") 
+                          ?? Shader.Find("UI/Default");
+            if (pShader != null)
+            {
+                renderer.material = new Material(pShader);
+                renderer.material.color = Color.white;
+            }
 
             particles = new ParticleSystem.Particle[maxParticles];
         }

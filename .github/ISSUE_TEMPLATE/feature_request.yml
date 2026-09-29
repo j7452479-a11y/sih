@@ -1,0 +1,22 @@
+name: 💡 Feature Request
+description: Propose a new feature, algorithm enhancement, or tactical capability
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Have an idea for improving the Tactical Edge Perception Engine or Civilian EV perception pipeline?
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or Tactical Capability Gap
+      description: Is your feature request related to a problem or tactical operational limitation?
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Solution / Architecture
+      description: Describe the mathematical, architectural, or simulation feature you would like to see.
+    validations:
+      required: true

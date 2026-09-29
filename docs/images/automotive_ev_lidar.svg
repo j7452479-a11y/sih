@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 480" width="100%" height="100%" style="background:#090d13; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+  <defs>
+    <linearGradient id="lidarBeam" x1="0%" y1="0%" x2="100%" y2="50%">
+      <stop offset="0%" stop-color="#58a6ff" stop-opacity="0.8"/>
+      <stop offset="100%" stop-color="#1f6feb" stop-opacity="0.1"/>
+    </linearGradient>
+    <linearGradient id="bumperBeam" x1="0%" y1="0%" x2="100%" y2="80%">
+      <stop offset="0%" stop-color="#3fb950" stop-opacity="0.9"/>
+      <stop offset="100%" stop-color="#238636" stop-opacity="0.15"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Title -->
+  <text x="40" y="45" fill="#58a6ff" font-size="18" font-weight="700">AUTOMOTIVE ELECTRIC VEHICLE (EV) DUAL-HORIZON LiDAR GEOMETRY</text>
+  <text x="40" y="68" fill="#8b949e" font-size="12">Asymmetric Vertical Pitch • Grazing-Angle Road Reflection • Pedestrian Crosswalk AEB Trigger</text>
+
+  <!-- Asphalt Road Line (Z = 0m) -->
+  <line x1="40" y1="380" x2="920" y2="380" stroke="#30363d" stroke-width="3"/>
+  <text x="820" y="405" fill="#8b949e" font-size="12" font-weight="600">Asphalt Road (Z = 0m)</text>
+
+  <!-- EV Silhouette -->
+  <!-- Wheels -->
+  <circle cx="160" cy="380" r="24" fill="#21262d" stroke="#8b949e" stroke-width="2"/>
+  <circle cx="280" cy="380" r="24" fill="#21262d" stroke="#8b949e" stroke-width="2"/>
+  <!-- Body -->
+  <path d="M 110 380 L 110 330 Q 120 300 170 300 L 220 280 L 290 280 Q 320 280 340 330 L 350 380 Z" fill="#161b22" stroke="#58a6ff" stroke-width="2"/>
+  <text x="180" y="340" fill="#f0f6fc" font-size="13" font-weight="700">Ego EV</text>
+
+  <!-- Roof LiDAR (Z = 1.8m) -->
+  <rect x="235" y="265" width="24" height="15" rx="3" fill="#1f6feb" stroke="#58a6ff" stroke-width="1.5"/>
+  <text x="140" y="255" fill="#58a6ff" font-size="11" font-weight="700">Roof LiDAR (+1.8m)</text>
+  <text x="140" y="270" fill="#8b949e" font-size="10">120° FOV • 200m Range</text>
+
+  <!-- Front Bumper LiDAR (Z = 0.5m) -->
+  <rect x="345" y="345" width="12" height="18" rx="2" fill="#238636" stroke="#3fb950" stroke-width="1.5"/>
+  <text x="365" y="350" fill="#3fb950" font-size="11" font-weight="700">Front Bumper LiDAR (+0.5m)</text>
+  <text x="365" y="365" fill="#8b949e" font-size="10">Near-Field Curb / Debris</text>
+
+  <!-- Roof Beams -->
+  <polygon points="255,272 880,310 880,378 500,380" fill="url(#lidarBeam)" opacity="0.35"/>
+  <line x1="255" y1="272" x2="880" y2="310" stroke="#58a6ff" stroke-width="1" stroke-dasharray="3"/>
+  <line x1="255" y1="272" x2="500" y2="380" stroke="#58a6ff" stroke-width="1.5"/>
+
+  <!-- Bumper Near-Field Cone -->
+  <polygon points="357,355 520,380 400,380" fill="url(#bumperBeam)" opacity="0.4"/>
+
+  <!-- Grazing Reflection Markings on Road -->
+  <ellipse cx="500" cy="380" rx="35" ry="3" fill="#58a6ff" opacity="0.8"/>
+  <ellipse cx="640" cy="380" rx="55" ry="3" fill="#58a6ff" opacity="0.6"/>
+  <ellipse cx="800" cy="380" rx="80" ry="3" fill="#58a6ff" opacity="0.4"/>
+  <text x="560" y="420" fill="#79c0ff" font-size="11">Grazing Angle Reflections (θ_inc ≥ 88°)</text>
+
+  <!-- Pedestrian Crosswalk & Target -->
+  <rect x="680" y="375" width="80" height="8" rx="1" fill="#f0f6fc" opacity="0.7"/>
+  <line x1="695" y1="375" x2="695" y2="383" stroke="#090d13" stroke-width="3"/>
+  <line x1="715" y1="375" x2="715" y2="383" stroke="#090d13" stroke-width="3"/>
+  <line x1="735" y1="375" x2="735" y2="383" stroke="#090d13" stroke-width="3"/>
+
+  <!-- Crossing Pedestrian -->
+  <circle cx="720" cy="325" r="7" fill="#f85149"/>
+  <line x1="720" y1="332" x2="720" y2="365" stroke="#f85149" stroke-width="3"/>
+  <line x1="720" y1="345" x2="710" y2="355" stroke="#f85149" stroke-width="2"/>
+  <line x1="720" y1="345" x2="730" y2="355" stroke="#f85149" stroke-width="2"/>
+  <line x1="720" y1="365" x2="713" y2="380" stroke="#f85149" stroke-width="2"/>
+  <line x1="720" y1="365" x2="727" y2="380" stroke="#f85149" stroke-width="2"/>
+
+  <!-- AEB Alert Box -->
+  <rect x="650" y="250" width="180" height="55" rx="6" fill="#da3633" opacity="0.2" stroke="#f85149" stroke-width="1.5"/>
+  <text x="665" y="272" fill="#ff7b72" font-size="12" font-weight="700">⚠️ AEB COLLISION ALERT</text>
+  <text x="665" y="290" fill="#f0f6fc" font-size="11">TTC = 1.14s &lt; 1.5s Threshold</text>
+</svg>

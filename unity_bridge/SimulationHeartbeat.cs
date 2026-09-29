@@ -21,34 +21,82 @@ namespace SIH.Perception
 
         private UdpClient udpClient;
         private float timer = 0f;
-        private const float HEARTBEAT_INTERVAL = 0.1f; // 10 Hz
+        private const float HEARTBEAT_INTERVAL = 0.05f; // 20 Hz
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+        private static void AutoInitBefore()
+        {
+            EnsureExists();
+        }
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void AutoInitialize()
         {
-            if (FindFirstObjectByType<SimulationHeartbeat>() == null)
+            EnsureExists();
+        }
+
+        public static void EnsureExists()
+        {
+            try
             {
-                GameObject go = new GameObject("[Simulation_Heartbeat_Master]");
-                go.AddComponent<SimulationHeartbeat>();
-                DontDestroyOnLoad(go);
+                if (FindAnyObjectByType<SimulationHeartbeat>() == null)
+                {
+                    GameObject go = new GameObject("[Simulation_Heartbeat_Master]");
+                    go.AddComponent<SimulationHeartbeat>();
+                    DontDestroyOnLoad(go);
+                }
             }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"[SimulationHeartbeat] Auto-spawn note: {ex.Message}");
+            }
+        }
+
+        void Awake()
+        {
+            Application.runInBackground = true;
+            InitSocket();
         }
 
         void Start()
         {
-            udpClient = new UdpClient();
+            Application.runInBackground = true;
+            InitSocket();
+        }
+
+        private void InitSocket()
+        {
+            if (udpClient == null)
+            {
+                try
+                {
+                    udpClient = new UdpClient();
+                }
+                catch (Exception ex)
+                {
+                    Debug.LogWarning($"[SimulationHeartbeat] Socket initialization note: {ex.Message}");
+                }
+            }
         }
 
         void Update()
         {
             // Update only runs when the simulation is active and unpaused.
+            if (!Application.runInBackground)
+            {
+                Application.runInBackground = true;
+            }
+
             timer += Time.deltaTime;
             if (timer >= HEARTBEAT_INTERVAL)
             {
                 timer = 0f;
+                InitSocket();
+                if (udpClient == null) return;
+
                 // Send current simulation time and UTC epoch
                 string simTimeStr = Time.time.ToString("F3", System.Globalization.CultureInfo.InvariantCulture);
-                string payload = $"{{\"sim_time\": {simTimeStr}, \"real_ts\": {DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() / 1000.0}}}";
+                string payload = $"{{\"source\": \"unity\", \"sim_time\": {simTimeStr}, \"real_ts\": {DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() / 1000.0}}}";
                 byte[] bytes = Encoding.UTF8.GetBytes(payload);
                 try
                 {

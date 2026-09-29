@@ -1,0 +1,46 @@
+name: 🐛 Bug Report
+description: Create a report to help us improve the perception engine or simulation
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to fill out this bug report! Please provide as much detail as possible.
+  - type: dropdown
+    id: component
+    attributes:
+      label: Affected Subsystem
+      options:
+        - 4-Tier Foveated Grid Engine (core_math)
+        - Multi-Level Surface / Void Carving (core_math)
+        - Multi-Target Tracker / Hungarian Kalman Filter (tracking)
+        - Heterogeneous UDP Ingestion & Jitter Buffer (ingestion)
+        - Unity 6 Simulation & C# Job Streamers (unity / unity_bridge)
+        - Commander C2 & Soldier AR Telemetry Server (c2_interface)
+        - Automotive EV Simulation (simulate_civilian_ev.py)
+        - Deep Learning Sparse Tensor / TensorRT (deep_learning)
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug Description
+      description: A clear and concise description of what the bug is.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to Reproduce
+      description: Detailed reproduction commands or scripts.
+      placeholder: |
+        1. Run python simulate_flight_and_math.py
+        2. Stream UDP datagrams on port 5001
+        3. See error
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant Logs or Traceback
+      render: shell

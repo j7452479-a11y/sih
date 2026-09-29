@@ -443,6 +443,23 @@
     </div>
   </div>
 
+  <!-- SIMULATION PAUSED OVERLAY (UNITY MASTER CLOCK SAFE-STOP) -->
+  <div id="simPauseOverlay" style="display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(14, 5, 8, 0.94); border: 2px solid #ff1744; border-radius: 12px; padding: 24px 36px; text-align: center; z-index: 50; box-shadow: 0 0 35px rgba(255, 23, 68, 0.6); backdrop-filter: blur(8px); pointer-events: none;">
+    <div style="font-size: 32px; margin-bottom: 8px;">⏸</div>
+    <div style="font-family: var(--mono); font-size: 18px; font-weight: 800; color: #ff1744; letter-spacing: 2px; text-transform: uppercase;">
+      SIMULATION PAUSED IN UNITY
+    </div>
+    <div style="font-family: var(--mono); font-size: 12px; color: #ffaa00; margin-top: 8px; font-weight: 600;">
+      MASTER CLOCK HEARTBEAT HALTED (&gt;250ms)
+    </div>
+    <div style="font-family: var(--sans); font-size: 11px; color: #a0aec0; margin-top: 6px; max-width: 400px; line-height: 1.4;">
+      3D Tactical Simulator &amp; Multi-Agent Dynamics Frozen under Watchdog Safe-Stop. Unpause Unity in editor to resume real-time physics simulation.
+    </div>
+    <div style="display: inline-block; margin-top: 14px; padding: 4px 14px; background: rgba(255, 23, 68, 0.2); border: 1px solid #ff1744; border-radius: 4px; font-size: 11px; color: #ff8080; font-family: var(--mono); font-weight: 700;">
+      PHYSICS CLOCK: FROZEN
+    </div>
+  </div>
+
   <!-- COMPASS TAPE (SOLDIER POV) -->
   <div class="compass-container" id="compassContainer">
     <div class="compass-needle"></div>
@@ -1355,13 +1372,33 @@
               latestTelemetry = data;
               lastTelemetryTime = performance.now();
 
-              if (data.fps) document.getElementById('dispFps').innerText = `LIVE ${data.fps} HZ`;
-              if (data.latency_ms) document.getElementById('dispLatency').innerText = `${data.latency_ms.toFixed(2)} ms`;
+              const isSimPaused = !!data.simulation_paused;
+              const pOverlay = document.getElementById('simPauseOverlay');
+              if (pOverlay) pOverlay.style.display = isSimPaused ? 'block' : 'none';
+
+              const netBadge = document.getElementById('netBadge');
+              if (netBadge) {
+                if (isSimPaused) {
+                  netBadge.innerText = 'PAUSED';
+                  netBadge.style.color = '#ff1744';
+                } else {
+                  netBadge.innerText = 'LIVE 20HZ';
+                  netBadge.style.color = '#00ff88';
+                }
+              }
+
+              if (isSimPaused) {
+                document.getElementById('dispFps').innerText = '0.0 FPS [PAUSED]';
+                document.getElementById('dispLatency').innerText = '-- MS';
+              } else {
+                if (data.fps) document.getElementById('dispFps').innerText = `LIVE ${data.fps} HZ`;
+                if (data.latency_ms) document.getElementById('dispLatency').innerText = `${data.latency_ms.toFixed(2)} ms`;
+              }
               if (data.cell_count) document.getElementById('dispCells').innerText = data.cell_count.toLocaleString();
               if (data.ram_mb) document.getElementById('dispRam').innerText = `${data.ram_mb} MB (-99.24%)`;
               if (data.tether_length_m) {
-                document.getElementById('dispTether').innerText = `${data.tether_length_m.toFixed(1)}m [${data.tether_status}]`;
-                document.getElementById('dispTether').style.color = (data.tether_status === 'NOMINAL') ? '#00ff88' : '#ffaa00';
+                document.getElementById('dispTether').innerText = isSimPaused ? `${data.tether_length_m.toFixed(1)}m [PAUSED]` : `${data.tether_length_m.toFixed(1)}m [${data.tether_status}]`;
+                document.getElementById('dispTether').style.color = isSimPaused ? '#ffaa00' : ((data.tether_status === 'NOMINAL') ? '#00ff88' : '#ffaa00');
               }
               if (data.tracks) {
                 liveTracks = data.tracks;
@@ -1387,8 +1424,12 @@
 
     function animate() {
       requestAnimationFrame(animate);
-      const dt = clock.getDelta();
-      simTime += dt;
+      const isSimPaused = latestTelemetry && !!latestTelemetry.simulation_paused;
+      const rawDt = clock.getDelta();
+      const dt = isSimPaused ? 0.0 : rawDt;
+      if (!isSimPaused) {
+        simTime += dt;
+      }
 
       const hasLiveTelemetry = latestTelemetry && (performance.now() - lastTelemetryTime < 1800);
 

@@ -70,8 +70,9 @@ class TemporalJitterBuffer:
                 self._pending_chunks[key]["chunks"].append(points)
             self._pending_chunks[key]["header"] = header
 
-        # If this chunk has fewer than 80 points (or 0), it is the final chunk of the sweep
-        if len(points) < 80 and key in self._pending_chunks:
+        # If marked as final chunk (checksum == 1) or has fewer than 80 points (or 0), it is the final chunk of the sweep
+        is_last = (getattr(header, "checksum", 0) == 1) or (len(points) < 80)
+        if is_last and key in self._pending_chunks:
             curr = self._pending_chunks.pop(key)
             merged = np.vstack(curr["chunks"]) if curr["chunks"] else np.empty((0, 4), dtype=np.float32)
             return curr["header"], merged

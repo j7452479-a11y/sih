@@ -54,17 +54,17 @@ namespace SIH.Perception
         void Update()
         {
             // Keyboard Hotkeys
-            if (Input.GetKeyDown(KeyCode.Space) && !isTransitioning)
+            if (SIH.Common.SimInput.GetKeyDown(KeyCode.Space) && !isTransitioning)
             {
                 // Toggle between Soldier and Commander
                 if (currentMode == CameraViewMode.Soldier) SwitchToCommander();
                 else SwitchToSoldier();
             }
 
-            if (Input.GetKeyDown(KeyCode.Alpha1)) SwitchToSoldier();
-            if (Input.GetKeyDown(KeyCode.Alpha2)) SwitchToUav();
-            if (Input.GetKeyDown(KeyCode.Alpha3)) SwitchToUgv();
-            if (Input.GetKeyDown(KeyCode.Alpha4)) SwitchToCommander();
+            if (SIH.Common.SimInput.GetKeyDown(KeyCode.Alpha1)) SwitchToSoldier();
+            if (SIH.Common.SimInput.GetKeyDown(KeyCode.Alpha2)) SwitchToUav();
+            if (SIH.Common.SimInput.GetKeyDown(KeyCode.Alpha3)) SwitchToUgv();
+            if (SIH.Common.SimInput.GetKeyDown(KeyCode.Alpha4)) SwitchToCommander();
 
             // Continuous socket following or orbiting
             if (!isTransitioning)

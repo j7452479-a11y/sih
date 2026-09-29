@@ -209,6 +209,7 @@ class CivilianEVSimulator:
                             points.append([hx, hy, hz, float(SemanticClass.BUILDING), float(intensity)])
 
         # 3. Parked Van Point Reflections
+        van_points = []
         dx_van = self.van_x - sensor_x
         dy_van = self.van_y - sensor_y
         dist_van = math.sqrt(dx_van * dx_van + dy_van * dy_van)
@@ -217,29 +218,30 @@ class CivilianEVSimulator:
                 rx = np.random.uniform(-self.van_w / 2.0, self.van_w / 2.0)
                 ry = np.random.uniform(-self.van_l / 2.0, self.van_l / 2.0)
                 rz = np.random.uniform(0.3, self.van_h)
-                points.append([dx_van + rx, dy_van + ry, rz - sensor_z, float(SemanticClass.VEHICLE), 200.0])
+                van_points.append([dx_van + rx, dy_van + ry, rz - sensor_z, float(SemanticClass.VEHICLE), 200.0])
 
         # 4. Pedestrian Point Reflections (if not occluded behind the van)
+        ped_points = []
         if not ped_occluded:
             dx_ped = self.ped_x - sensor_x
             dy_ped = self.ped_y - sensor_y
             dist_ped = math.sqrt(dx_ped * dx_ped + dy_ped * dy_ped)
             if 1.0 < dist_ped < 50.0:
-                for _ in range(8):
+                for _ in range(16):
                     rx = np.random.uniform(-0.25, 0.25)
                     ry = np.random.uniform(-0.25, 0.25)
                     rz = np.random.uniform(0.1, 1.7)
-                    points.append([dx_ped + rx, dy_ped + ry, rz - sensor_z, float(SemanticClass.PEDESTRIAN), 220.0])
+                    ped_points.append([dx_ped + rx, dy_ped + ry, rz - sensor_z, float(SemanticClass.PEDESTRIAN), 220.0])
 
-        if len(points) == 0:
+        # Prioritize Pedestrian and Obstacle returns in datagram so DBSCAN never starves
+        priority_pts = ped_points + van_points
+        needed_road = max(0, 80 - len(priority_pts))
+        selected_points = priority_pts + points[:needed_road]
+
+        if len(selected_points) == 0:
             return np.zeros((0, 5), dtype=np.float32), ped_occluded
 
-        pts_array = np.array(points, dtype=np.float32)
-        # Cap packet points to 80 per packet to match UDP protocol standard
-        if len(pts_array) > 80:
-            indices = np.random.choice(len(pts_array), 80, replace=False)
-            pts_array = pts_array[indices]
-
+        pts_array = np.array(selected_points, dtype=np.float32)
         return pts_array, ped_occluded
 
     def send_sih1_packet(self, points: np.ndarray):
@@ -252,7 +254,7 @@ class CivilianEVSimulator:
         reserved = 0
 
         # Header: Magic(4s) + Frame(I) + Ts(d) + Type(B) + Count(I) + Checksum(I) + OriginXYZ(3f) + RollPitchYaw(3f)
-        # Pack 49-byte binary SIH2 header in little-endian format
+        # Pack 49-byte binary SIH2 header in little-endian format (checksum=1 marks final/complete chunk)
         header_bytes = struct.pack(
             "<4sIdBII6f",
             b"SIH2",
@@ -260,7 +262,7 @@ class CivilianEVSimulator:
             unix_ts,
             sensor_type,
             num_points,
-            0,
+            1,
             float(self.ego_x),
             float(self.ego_y),
             float(self.ego_z + EV_LIDAR_HEIGHT_M),

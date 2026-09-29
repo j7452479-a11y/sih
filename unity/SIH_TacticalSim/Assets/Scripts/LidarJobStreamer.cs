@@ -40,9 +40,17 @@ namespace SIH.Perception
 
         public List<Vector3> GetRecentHits() => recentHits;
 
+        void Awake()
+        {
+            Application.runInBackground = true;
+            SIH.Perception.SimulationHeartbeat.EnsureExists();
+        }
+
         void Start()
         {
+            Application.runInBackground = true;
             udpClient = new UdpClient();
+            SIH.Perception.SimulationHeartbeat.EnsureExists();
             if (sensorType == 1)
             {
                 isNadirDroneScanner = true;
@@ -57,6 +65,11 @@ namespace SIH.Perception
 
         void Update()
         {
+            if (!Application.runInBackground)
+            {
+                Application.runInBackground = true;
+            }
+
             scanTimer += Time.deltaTime;
             if (scanTimer >= SCAN_INTERVAL)
             {
@@ -129,21 +142,47 @@ namespace SIH.Perception
 
             Vector3 euler = transform.rotation.eulerAngles;
 
-            // Stream packets in chunks of up to 80 points to guarantee < 1500B MTU
-            for (int chunkStart = 0; chunkStart < validHits.Count && chunkStart < 800; chunkStart += 80)
+            if (validHits.Count == 0)
             {
-                int chunkCount = Mathf.Min(80, validHits.Count - chunkStart);
-
+                // Send zero-point keepalive packet so server maintains pose tracking and clock synchronization
                 using (MemoryStream ms = new MemoryStream())
                 using (BinaryWriter writer = new BinaryWriter(ms))
                 {
-                    // 49-byte SIH2 Header: <4sIdBII6f
-                    writer.Write(System.Text.Encoding.ASCII.GetBytes("SIH2")); // 4 bytes
+                    writer.Write(System.Text.Encoding.ASCII.GetBytes("SIH2"));
+                    writer.Write(frameId);
+                    writer.Write(unixTimestamp);
+                    writer.Write(sensorType);
+                    writer.Write((uint)0); // chunkCount = 0
+                    writer.Write((uint)1); // isLastChunk = 1
+                    writer.Write(sensorOrigin.x);
+                    writer.Write(sensorOrigin.z);
+                    writer.Write(sensorOrigin.y);
+                    writer.Write(euler.z);
+                    writer.Write(euler.x);
+                    writer.Write(euler.y);
+
+                    byte[] dgram = ms.ToArray();
+                    try { udpClient.Send(dgram, dgram.Length, targetIp, targetPort); } catch { }
+                }
+            }
+            else
+            {
+                // Stream packets in chunks of up to 80 points to guarantee < 1500B MTU
+                for (int chunkStart = 0; chunkStart < validHits.Count && chunkStart < 800; chunkStart += 80)
+                {
+                    int chunkCount = Mathf.Min(80, validHits.Count - chunkStart);
+                    uint isLastChunk = (chunkStart + chunkCount >= validHits.Count || chunkStart + chunkCount >= 800) ? 1u : 0u;
+
+                    using (MemoryStream ms = new MemoryStream())
+                    using (BinaryWriter writer = new BinaryWriter(ms))
+                    {
+                        // 49-byte SIH2 Header: <4sIdBII6f
+                        writer.Write(System.Text.Encoding.ASCII.GetBytes("SIH2")); // 4 bytes
                     writer.Write(frameId);                                     // uint32 (4 bytes)
                     writer.Write(unixTimestamp);                               // float64 (8 bytes)
                     writer.Write(sensorType);                                  // uint8 (1 byte)
                     writer.Write((uint)chunkCount);                            // uint32 (4 bytes)
-                    writer.Write((uint)0);                                     // checksum uint32 (4 bytes)
+                    writer.Write(isLastChunk);                                 // checksum/is_last uint32 (4 bytes)
                     writer.Write(sensorOrigin.x);                              // origin_x (East) float32
                     writer.Write(sensorOrigin.z);                              // origin_y (North) float32
                     writer.Write(sensorOrigin.y);                              // origin_z (Up) float32
@@ -208,6 +247,7 @@ namespace SIH.Perception
                         // Non-blocking UDP transport
                     }
                 }
+            }
             }
 
             commands.Dispose();

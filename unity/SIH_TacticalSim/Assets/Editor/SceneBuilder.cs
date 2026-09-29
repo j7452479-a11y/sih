@@ -416,13 +416,13 @@ public static class SceneBuilder
         // 5. Parked Delivery Van at Curb (Z = +5.0m, casting radial blind occlusion cone)
         GameObject van = CreateDeliveryVan("Delivery_Van_Parked", new Vector3(2.8f, 0f, 5.0f), matVan, matUnderpass, matCarTire, matCarGlass, matHeadlight, layerObstacle);
 
-        // 6. Crossing Pedestrian (Steps out from behind the parked delivery van)
-        GameObject ped = GameObject.CreatePrimitive(PrimitiveType.Capsule);
-        ped.name = "Pedestrian_VRU_01";
-        ped.transform.position = new Vector3(4.0f, 0.9f, 6.2f);
-        ped.transform.localScale = new Vector3(0.5f, 0.9f, 0.5f);
-        ped.GetComponent<Renderer>().sharedMaterial = matPed;
-        ped.layer = layerHostile;
+        // 6. Crossing Pedestrian Manager & Dynamic Crosswalk Animator (VRU_01)
+        GameObject pedManager = new GameObject("[Civilian_Pedestrian_Manager]");
+        CivilianPedestrianCrossing pedCrossing = pedManager.AddComponent<CivilianPedestrianCrossing>();
+        pedCrossing.crosswalkZ = 6.2f;
+        pedCrossing.minX = -3.2f;
+        pedCrossing.maxX = 4.2f;
+        pedCrossing.walkSpeed = 1.4f;
 
         // 7. Ego Civilian EV Sedan with Realistic Shape (Chassis, Cabin, 4 Wheels, Lights, Mirrors)
         GameObject ev = new GameObject("Ego_Civilian_EV");

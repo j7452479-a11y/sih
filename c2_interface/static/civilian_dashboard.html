@@ -537,6 +537,7 @@
         </div>
         <div class="nav-links">
             <button class="btn-nav" style="cursor:pointer; background:rgba(0,255,136,0.15); border-color:var(--accent-green); color:var(--accent-green);" onclick="document.getElementById('researchModal').style.display='flex'">📖 HOW EV LIDAR WORKS</button>
+            <button id="btnSyncUnity" class="btn-nav" style="cursor:pointer; border-color:var(--accent-green); color:var(--accent-green);" onclick="toggleUnitySync()">🔗 UNITY SYNC: ON</button>
             <a href="/sim" class="btn-nav">3D MULTI-AGENT SIM</a>
             <a href="/c2" class="btn-nav">TACTICAL MUM-T</a>
             <a href="/civilian" class="btn-nav active">CIVILIAN EV COCKPIT</a>
@@ -617,6 +618,23 @@
                     <button class="btn-pov active" id="btnPovRoof" onclick="setEgoCamera('roof')">ROOF CHASE</button>
                     <button class="btn-pov" id="btnPovCockpit" onclick="setEgoCamera('cockpit')">WINDSHIELD POV</button>
                     <button class="btn-pov" id="btnPovBumper" onclick="setEgoCamera('bumper')">BUMPER LIDAR</button>
+                </div>
+
+                <!-- SIMULATION PAUSED MODAL (UNITY MASTER CLOCK SAFE-STOP) -->
+                <div id="civPauseModal" style="display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(14, 5, 8, 0.94); border: 2px solid #ff1744; border-radius: 12px; padding: 24px 36px; text-align: center; z-index: 50; box-shadow: 0 0 35px rgba(255, 23, 68, 0.6); backdrop-filter: blur(8px); pointer-events: none;">
+                    <div style="font-size: 32px; margin-bottom: 8px;">⏸</div>
+                    <div style="font-family: 'Orbitron', sans-serif; font-size: 18px; font-weight: 800; color: #ff1744; letter-spacing: 2px; text-transform: uppercase;">
+                        SIMULATION PAUSED IN UNITY
+                    </div>
+                    <div style="font-family: monospace; font-size: 12px; color: #ffaa00; margin-top: 8px; font-weight: 700;">
+                        AUTONOMOUS EV MOTION &amp; PERCEPTION PIPELINE HALTED
+                    </div>
+                    <div style="font-size: 11px; color: #94a3b8; margin-top: 6px; max-width: 400px; line-height: 1.4;">
+                        Unity master clock heartbeat dropped (&gt;250ms). Actuators locked at 0 km/h under Watchdog Safe-Stop. Unpause Unity to resume autonomous drive.
+                    </div>
+                    <div style="display: inline-block; margin-top: 14px; padding: 4px 14px; background: rgba(255, 23, 68, 0.2); border: 1px solid #ff1744; border-radius: 4px; font-size: 11px; color: #ff8080; font-family: monospace; font-weight: 700;">
+                        ACTUATOR LOCK: 0.0 KM/H | BRAKES APPLIED
+                    </div>
                 </div>
             </div>
 
@@ -1024,90 +1042,53 @@
         // ANIMATION & LIVE PERCEPTION LOOP
         // -------------------------------------------------------------
         let simTime = 0;
+        let isBackendPaused = false;
+        let syncWithUnity = true; // Default to Live Unity Sync so pause state immediately locks actuators
+        let lastLiveBackendTime = 0;
+
         let civilianState = {
             speed_kmh: 36.0,
             speed_mps: 10.0,
             aeb_status: "CRUISE_NOMINAL",
             ttc_s: 99.9,
+            overhead_clearance_m: 3.2,
             corridor_length_m: 25.0,
             ego_pose: { x: 0.0, y: -5.0, pitch: 0.0 },
             pedestrian_tracks: []
         };
 
-        function animate() {
-            requestAnimationFrame(animate);
-            simTime += 0.05;
-
-            // Pedestrian Trajectory (Crossing from Right Curb X=3.8m across to X=-3.0m)
-            let pedX = 3.8 - ((simTime * 1.5) % 7.6);
-            pedGroup.position.set(pedX, 0, 14.0);
-
-            // Occlusion Check behind Delivery Van (at X=2.8, Z=12.0)
-            const pedOccluded = (pedX > 2.0 && evGroup.position.z < 8.0);
-            pedGroup.visible = !pedOccluded;
-
-            // Longitudinal Distance from EV to Pedestrian
-            const distToPed = 14.0 - evGroup.position.z;
-            const inLongitudinal = (distToPed > 0.5 && distToPed < civilianState.corridor_length_m);
-            const inLateral = Math.abs(pedX) < 1.75;
-            const aebTriggered = (inLongitudinal && inLateral && !pedOccluded);
-
-            // Update Vehicle Kinematics
-            if (aebTriggered) {
-                corridorMat.color.setHex(0xff1744); // Red emergency brake
-                pedBoxMat.color.setHex(0xff1744);
-                evGroup.rotation.x = -0.04; // Nose down pitch (-2.5 deg)
-                civilianState.speed_kmh = Math.max(0, civilianState.speed_kmh - 8.0);
-                civilianState.aeb_status = "EMERGENCY_BRAKING_ACTIVE";
-                civilianState.ttc_s = Math.max(0.2, distToPed / Math.max(civilianState.speed_mps, 0.5));
-            } else {
-                corridorMat.color.setHex(0x00ff88); // Green nominal cruise
-                pedBoxMat.color.setHex(0xff9100);
-                evGroup.rotation.x = 0.0;
-                civilianState.speed_kmh = Math.min(36.0, civilianState.speed_kmh + 2.0);
-                civilianState.aeb_status = "CRUISE_NOMINAL";
-                civilianState.ttc_s = 99.9;
-
-                // Move forward along the road
-                evGroup.position.z += 0.12 * (civilianState.speed_kmh / 36.0);
-                if (evGroup.position.z > 35.0) evGroup.position.z = -25.0; // Loop proving ground
+        function toggleUnitySync() {
+            syncWithUnity = !syncWithUnity;
+            const btn = document.getElementById('btnSyncUnity');
+            if (btn) {
+                btn.innerText = syncWithUnity ? "🔗 UNITY SYNC: ON" : "⚡ STANDALONE MODE";
+                btn.style.borderColor = syncWithUnity ? "var(--accent-green)" : "#ffaa00";
+                btn.style.color = syncWithUnity ? "var(--accent-green)" : "#ffaa00";
             }
-            civilianState.speed_mps = civilianState.speed_kmh / 3.6;
-
-            // ---------------------------------------------------------
-            // STRICTLY EGO-CENTRIC CAMERA POSITIONS (NO GOD-MODE TOP-DOWN)
-            // ---------------------------------------------------------
-            if (egoCameraMode === 'roof') {
-                // Third-person chase cam mounted 2.2m high and 6.0m behind the vehicle roof
-                camera.position.set(evGroup.position.x, 2.2, evGroup.position.z - 6.0);
-                camera.lookAt(evGroup.position.x, 1.4, evGroup.position.z + 25.0);
-            } else if (egoCameraMode === 'cockpit') {
-                // Driver windshield perspective at eye level inside the cabin
-                camera.position.set(evGroup.position.x - 0.35, 1.3, evGroup.position.z + 0.2);
-                camera.lookAt(evGroup.position.x - 0.35, 1.3, evGroup.position.z + 35.0);
-            } else if (egoCameraMode === 'bumper') {
-                // Front bumper low-grazing sensor view at +0.5m
-                camera.position.set(evGroup.position.x, 0.5, evGroup.position.z + 2.3);
-                camera.lookAt(evGroup.position.x, 0.5, evGroup.position.z + 30.0);
-            }
-
-            renderer.render(scene, camera);
-
-            // Draw Real-Time Range-View and Longitudinal Cross-Section
-            drawRangeView(pedX, aebTriggered, pedOccluded);
-            drawLongitudinalProfile(evGroup.position.z);
-
-            // Update UI Cockpit Elements
-            updateCockpitUI(pedX, pedOccluded, aebTriggered);
         }
 
-        let isBackendPaused = false;
         async function checkBackendState() {
             try {
                 const r = await fetch('/api/civilian_state');
                 if (r.ok) {
                     const d = await r.json();
                     isBackendPaused = !!d.simulation_paused;
+                    const pModal = document.getElementById('civPauseModal');
+                    if (pModal) pModal.style.display = isBackendPaused ? 'block' : 'none';
+
+                    if (d.status === "OPERATIONAL") {
+                        lastLiveBackendTime = Date.now();
+                        if (syncWithUnity) {
+                            civilianState.speed_kmh = d.speed_kmh || 0;
+                            civilianState.speed_mps = d.speed_mps || 0;
+                            civilianState.aeb_status = d.aeb_status || "CRUISE_NOMINAL";
+                            civilianState.ttc_s = d.ttc_s || 99.9;
+                            civilianState.overhead_clearance_m = d.overhead_clearance_m || 3.2;
+                            civilianState.corridor_length_m = d.corridor_length_m || 25.0;
+                            if (d.ego_pose) civilianState.ego_pose = d.ego_pose;
+                            if (d.pedestrian_tracks) civilianState.pedestrian_tracks = d.pedestrian_tracks;
+                        }
+                    }
                 }
             } catch (e) {}
         }
@@ -1124,15 +1105,15 @@
                 document.getElementById('ttcVal').innerText = "HALTED";
                 banner.className = "aeb-alert-banner danger";
                 title.innerText = "CRITICAL: SIMULATION PAUSED — HARDWARE SAFE-STOP";
-                desc.innerText = "Master Clock Heartbeat Dropped (>250ms). Physical Motors / Actuators Halted.";
+                desc.innerText = "Unity Master Clock Paused (>250ms). Actuators Locked at 0 km/h (Safe-Stop Active).";
                 return;
             }
 
             document.getElementById('speedText').innerText = Math.round(civilianState.speed_kmh);
             document.getElementById('pitchVal').innerText = (evGroup.rotation.x < 0 ? "-2.5°" : "+0.0°");
-            document.getElementById('ttcVal').innerText = aebTriggered ? `${civilianState.ttc_s.toFixed(1)} s` : "> 5.0 s";
+            document.getElementById('ttcVal').innerText = (aebTriggered || civilianState.aeb_status === "EMERGENCY_BRAKING_ACTIVE") ? `${civilianState.ttc_s.toFixed(1)} s` : "> 5.0 s";
 
-            if (aebTriggered) {
+            if (aebTriggered || civilianState.aeb_status === "EMERGENCY_BRAKING_ACTIVE") {
                 banner.className = "aeb-alert-banner danger";
                 title.innerText = "EMERGENCY BRAKING ACTIVE";
                 desc.innerText = `Pedestrian Crossing In Path (TTC = ${civilianState.ttc_s.toFixed(1)}s <= 1.8s)`;
@@ -1149,6 +1130,110 @@
             document.getElementById('pedOffsetVal').innerText = `${pedX >= 0 ? "+" : ""}${pedX.toFixed(1)}m, ${(14.0 - evGroup.position.z).toFixed(1)}m`;
         }
 
+        function animate() {
+            requestAnimationFrame(animate);
+
+            const isLiveBackendActive = (Date.now() - lastLiveBackendTime < 1500) && syncWithUnity && !isBackendPaused;
+            const isPausedHalt = isBackendPaused;
+
+            let pedX = 3.8;
+            let pedOccluded = false;
+            let aebTriggered = false;
+
+            if (isPausedHalt) {
+                // Keep vehicle and VRU stationary under safe-stop
+                evGroup.rotation.x = -0.04;
+                corridorMat.color.setHex(0xff1744);
+                pedBoxMat.color.setHex(0xff1744);
+                civilianState.speed_kmh = 0;
+                civilianState.speed_mps = 0;
+                pedX = pedGroup.position.x;
+                pedOccluded = false;
+                aebTriggered = true;
+            } else if (isLiveBackendActive && civilianState.pedestrian_tracks && civilianState.pedestrian_tracks.length > 0) {
+                // Live telemetry driving 3D positions
+                const firstPed = civilianState.pedestrian_tracks[0];
+                pedX = Math.max(-4.0, Math.min(4.5, firstPed.x));
+                pedGroup.position.set(pedX, 0, 14.0);
+
+                pedOccluded = (pedX > 2.0 && evGroup.position.z < 8.0);
+                pedGroup.visible = !pedOccluded;
+
+                aebTriggered = (civilianState.aeb_status === "EMERGENCY_BRAKING_ACTIVE");
+                if (aebTriggered) {
+                    corridorMat.color.setHex(0xff1744);
+                    pedBoxMat.color.setHex(0xff1744);
+                    evGroup.rotation.x = -0.04;
+                } else {
+                    corridorMat.color.setHex(0x00ff88);
+                    pedBoxMat.color.setHex(0xff9100);
+                    evGroup.rotation.x = 0.0;
+                    evGroup.position.z += 0.12 * (civilianState.speed_kmh / 36.0);
+                    if (evGroup.position.z > 35.0) evGroup.position.z = -25.0;
+                }
+            } else {
+                // Standalone fallback simulation
+                simTime += 0.05;
+                pedX = 3.8 - ((simTime * 1.5) % 7.6);
+                pedGroup.position.set(pedX, 0, 14.0);
+
+                pedOccluded = (pedX > 2.0 && evGroup.position.z < 8.0);
+                pedGroup.visible = !pedOccluded;
+
+                const distToPed = 14.0 - evGroup.position.z;
+                const inLongitudinal = (distToPed > 0.5 && distToPed < civilianState.corridor_length_m);
+                const inLateral = Math.abs(pedX) < 1.75;
+                aebTriggered = (inLongitudinal && inLateral && !pedOccluded);
+
+                if (aebTriggered) {
+                    corridorMat.color.setHex(0xff1744);
+                    pedBoxMat.color.setHex(0xff1744);
+                    evGroup.rotation.x = -0.04;
+                    civilianState.speed_kmh = Math.max(0, civilianState.speed_kmh - 8.0);
+                    civilianState.aeb_status = "EMERGENCY_BRAKING_ACTIVE";
+                    civilianState.ttc_s = Math.max(0.2, distToPed / Math.max(civilianState.speed_mps, 0.5));
+                } else {
+                    corridorMat.color.setHex(0x00ff88);
+                    pedBoxMat.color.setHex(0xff9100);
+                    evGroup.rotation.x = 0.0;
+                    civilianState.speed_kmh = Math.min(36.0, civilianState.speed_kmh + 2.0);
+                    civilianState.aeb_status = "CRUISE_NOMINAL";
+                    civilianState.ttc_s = 99.9;
+                    evGroup.position.z += 0.12 * (civilianState.speed_kmh / 36.0);
+                    if (evGroup.position.z > 35.0) evGroup.position.z = -25.0;
+                }
+                civilianState.speed_mps = civilianState.speed_kmh / 3.6;
+            }
+
+            // Update Ego Camera
+            if (egoCameraMode === 'roof') {
+                camera.position.set(evGroup.position.x, 2.2, evGroup.position.z - 6.0);
+                camera.lookAt(evGroup.position.x, 1.4, evGroup.position.z + 25.0);
+            } else if (egoCameraMode === 'cockpit') {
+                camera.position.set(evGroup.position.x - 0.35, 1.3, evGroup.position.z + 0.2);
+                camera.lookAt(evGroup.position.x - 0.35, 1.3, evGroup.position.z + 35.0);
+            } else if (egoCameraMode === 'bumper') {
+                camera.position.set(evGroup.position.x, 0.5, evGroup.position.z + 2.3);
+                camera.lookAt(evGroup.position.x, 0.5, evGroup.position.z + 30.0);
+            }
+
+            renderer.render(scene, camera);
+
+            // Draw Real-Time Range-View and Longitudinal Cross-Section
+            drawRangeView(pedX, aebTriggered, pedOccluded);
+            drawLongitudinalProfile(evGroup.position.z);
+
+            // Update UI Cockpit Elements
+            updateCockpitUI(pedX, pedOccluded, aebTriggered);
+        }
+
+        // Initialize button label and kick off 60 FPS animation loop
+        const initBtn = document.getElementById('btnSyncUnity');
+        if (initBtn) {
+            initBtn.innerText = "🔗 UNITY SYNC: ON";
+            initBtn.style.borderColor = "var(--accent-green)";
+            initBtn.style.color = "var(--accent-green)";
+        }
         animate();
     </script>
 </body>

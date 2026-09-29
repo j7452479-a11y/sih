@@ -69,9 +69,11 @@
     <Compile Include="Assets\Scripts\HostilePatrol.cs" />
     <Compile Include="Assets\TutorialInfo\Readme.cs" />
     <Compile Include="Assets\Scripts\MUMT_CameraController.cs" />
+    <Compile Include="Assets\Scripts\MultiScreenDisplayManager.cs" />
     <Compile Include="Assets\Scripts\UavFlightPath.cs" />
     <Compile Include="Assets\Scripts\ThreatReticleManager.cs" />
     <Compile Include="Assets\Scripts\EV_LidarStreamer.cs" />
+    <Compile Include="Assets\Scripts\CivilianPedestrianCrossing.cs" />
     <Compile Include="Assets\Scripts\EV_CameraController.cs" />
     <Compile Include="Assets\Scripts\SimulationHeartbeat.cs" />
     <Compile Include="Assets\Scripts\SimInput.cs" />

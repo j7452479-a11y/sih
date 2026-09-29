@@ -74,6 +74,7 @@ DEFAULT_RETURN_IP = "127.0.0.1"
 UAV_UDP_PORT = 5001               # Inbound UAV point cloud stream
 UGV_UDP_PORT = 5002               # Inbound UGV point cloud stream
 TELEMETRY_RETURN_PORT = 5003      # Outbound HUD / target coordinates to Unity HUD
+CIVILIAN_TELEMETRY_PORT = 5004    # Dedicated return telemetry for Civilian EV controller
 WEB_SERVER_PORT = 8000            # FastAPI REST & WebSocket hub
 
 # Binary UDP Header constants
@@ -136,6 +137,6 @@ FAR_FIELD_STREAM_RATE_HZ = 0.5
 # 7. Watchdog Heartbeat & Real-Time Synchronization
 # ==============================================================================
 HEARTBEAT_UDP_PORT = 5005
-WATCHDOG_TIMEOUT_SEC = 0.25         # 250ms strict hardware safe-stop threshold
-HEARTBEAT_INTERVAL_SEC = 0.10       # 10 Hz broadcast
+WATCHDOG_TIMEOUT_SEC = 0.50         # 500ms strict hardware safe-stop threshold
+HEARTBEAT_INTERVAL_SEC = 0.05       # 20 Hz broadcast
 HARDWARE_SERIAL_PORT = None         # Optional serial port (e.g. 'COM3' or '/dev/ttyUSB0')

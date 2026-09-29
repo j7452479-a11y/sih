@@ -26,6 +26,17 @@ namespace SIH.Perception
     }
 
     [System.Serializable]
+    public class PoseData
+    {
+        public float x;
+        public float y;
+        public float z;
+        public float roll;
+        public float pitch;
+        public float yaw;
+    }
+
+    [System.Serializable]
     public class TelemetryPayload
     {
         public double timestamp;
@@ -34,8 +45,8 @@ namespace SIH.Perception
         public bool emergency_stop;
         public List<TargetData> targets;
         public string designated_structure;
-        public float[] uav_pose;
-        public float[] ugv_pose;
+        public PoseData uav_pose;
+        public PoseData ugv_pose;
         public float tether_length_m;
         public string tether_status;
     }
@@ -80,6 +91,7 @@ namespace SIH.Perception
             try
             {
                 var client = new UdpClient();
+                client.ExclusiveAddressUse = false;
                 client.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
                 client.Client.Bind(new IPEndPoint(IPAddress.Any, listenPort));
                 listener = client;
@@ -264,7 +276,7 @@ namespace SIH.Perception
             // Fallback: discover scene hostile game objects if no network targets yet
             if (targetsToRender.Count == 0)
             {
-                var hostiles = GameObject.FindObjectsByType<HostilePatrol>(FindObjectsSortMode.None);
+                var hostiles = FindObjectsByType<HostilePatrol>();
                 int id = 1;
                 foreach (var h in hostiles)
                 {

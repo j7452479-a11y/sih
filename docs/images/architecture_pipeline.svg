@@ -1,0 +1,175 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 620" width="100%" height="100%" style="background:#0d1117; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+  <defs>
+    <linearGradient id="gradHeader" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#1f6feb"/>
+      <stop offset="100%" stop-color="#238636"/>
+    </linearGradient>
+    <linearGradient id="gradUav" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#161b22"/>
+      <stop offset="100%" stop-color="#0d1117"/>
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="3" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <!-- Title Banner -->
+  <rect x="25" y="20" width="1050" height="50" rx="8" fill="url(#gradHeader)" opacity="0.15" stroke="#1f6feb" stroke-width="1"/>
+  <text x="50" y="52" fill="#58a6ff" font-size="20" font-weight="700">TACTICAL EDGE PERCEPTION ENGINE (SIH26053) — COMPLETE SYSTEM ARCHITECTURE</text>
+  <text x="890" y="52" fill="#7ee787" font-size="14" font-weight="600">20 Hz Deterministic Flow</text>
+
+  <!-- LAYER 1: SENSOR SWARM -->
+  <g transform="translate(30, 95)">
+    <rect width="210" height="490" rx="8" fill="#161b22" stroke="#30363d" stroke-width="1.5"/>
+    <rect width="210" height="36" rx="8" fill="#21262d"/>
+    <text x="15" y="24" fill="#f0f6fc" font-size="14" font-weight="700">1. SENSOR SWARM</text>
+
+    <!-- UAV Box -->
+    <rect x="15" y="55" width="180" height="125" rx="6" fill="#0d1117" stroke="#58a6ff" stroke-width="1"/>
+    <text x="25" y="78" fill="#58a6ff" font-size="13" font-weight="700">🚁 UAV Tactical Drone</text>
+    <text x="25" y="98" fill="#8b949e" font-size="11">• R=32m Orbit at +30m Alt</text>
+    <text x="25" y="115" fill="#8b949e" font-size="11">• 32-Ch Nadir LiDAR (20 Hz)</text>
+    <text x="25" y="132" fill="#8b949e" font-size="11">• SE(3) Pose Quaternions</text>
+    <rect x="25" y="145" width="160" height="22" rx="4" fill="#1f6feb" opacity="0.2"/>
+    <text x="45" y="160" fill="#58a6ff" font-size="11" font-weight="600">UDP Port 5001 (SIH1)</text>
+
+    <!-- UGV Box -->
+    <rect x="15" y="195" width="180" height="125" rx="6" fill="#0d1117" stroke="#3fb950" stroke-width="1"/>
+    <text x="25" y="218" fill="#3fb950" font-size="13" font-weight="700">🚙 UGV Tethered Rover</text>
+    <text x="25" y="238" fill="#8b949e" font-size="11">• Bridge Underpass Ellipse</text>
+    <text x="25" y="255" fill="#8b949e" font-size="11">• 16-Ch Horizontal LiDAR</text>
+    <text x="25" y="272" fill="#8b949e" font-size="11">• Catenary Cable Physics</text>
+    <rect x="25" y="285" width="160" height="22" rx="4" fill="#238636" opacity="0.2"/>
+    <text x="45" y="300" fill="#3fb950" font-size="11" font-weight="600">UDP Port 5002 (SIH1)</text>
+
+    <!-- EV Box -->
+    <rect x="15" y="335" width="180" height="135" rx="6" fill="#0d1117" stroke="#d29922" stroke-width="1"/>
+    <text x="25" y="358" fill="#d29922" font-size="13" font-weight="700">⚡ Autonomous EV</text>
+    <text x="25" y="378" fill="#8b949e" font-size="11">• Roof (1.8m, 120° FOV)</text>
+    <text x="25" y="395" fill="#8b949e" font-size="11">• Bumper Solid-State LiDAR</text>
+    <text x="25" y="412" fill="#8b949e" font-size="11">• Road Grazing Reflection</text>
+    <text x="25" y="429" fill="#8b949e" font-size="11">• Pedestrian Crosswalk AEB</text>
+    <rect x="25" y="438" width="160" height="20" rx="4" fill="#bb8009" opacity="0.2"/>
+    <text x="45" y="452" fill="#d29922" font-size="10" font-weight="600">Autonomous Dual Mode</text>
+  </g>
+
+  <!-- ARROW 1 -> 2 -->
+  <path d="M 240 180 L 275 180" stroke="#58a6ff" stroke-width="2" marker-end="url(#arrow)" fill="none"/>
+  <path d="M 240 320 L 275 320" stroke="#3fb950" stroke-width="2" fill="none"/>
+  <path d="M 275 180 L 275 300 L 290 300" stroke="#58a6ff" stroke-width="2" fill="none"/>
+  <path d="M 275 320 L 275 300" stroke="#3fb950" stroke-width="2" fill="none"/>
+
+  <!-- LAYER 2: INGESTION & JITTER BUFFER -->
+  <g transform="translate(290, 95)">
+    <rect width="210" height="490" rx="8" fill="#161b22" stroke="#30363d" stroke-width="1.5"/>
+    <rect width="210" height="36" rx="8" fill="#21262d"/>
+    <text x="15" y="24" fill="#f0f6fc" font-size="14" font-weight="700">2. INGESTION & SYNC</text>
+
+    <!-- Zero Copy Socket -->
+    <rect x="15" y="60" width="180" height="100" rx="6" fill="#0d1117" stroke="#8b949e" stroke-width="1"/>
+    <text x="25" y="85" fill="#f0f6fc" font-size="12" font-weight="700">Zero-Copy UDP Ingestion</text>
+    <text x="25" y="105" fill="#8b949e" font-size="11">• SO_RCVBUF = 8 MB</text>
+    <text x="25" y="122" fill="#8b949e" font-size="11">• Binary SIH1 Struct unpack</text>
+    <text x="25" y="139" fill="#8b949e" font-size="11">• 36B Header + 16B/point</text>
+
+    <!-- Jitter Buffer Box -->
+    <rect x="15" y="180" width="180" height="135" rx="6" fill="#0d1117" stroke="#a371f7" stroke-width="1"/>
+    <text x="25" y="205" fill="#a371f7" font-size="12" font-weight="700">Temporal Jitter Ring</text>
+    <text x="25" y="225" fill="#8b949e" font-size="11">• Window: Δt ≤ 50 ms</text>
+    <text x="25" y="242" fill="#8b949e" font-size="11">• Max Offset: |t1 - t2| ≤ 25ms</text>
+    <text x="25" y="259" fill="#8b949e" font-size="11">• Dropped stale frames &lt;0.1%</text>
+    <text x="25" y="276" fill="#8b949e" font-size="11">• Monotonic timestamping</text>
+    <rect x="25" y="285" width="160" height="20" rx="4" fill="#8957e5" opacity="0.2"/>
+    <text x="40" y="299" fill="#a371f7" font-size="10" font-weight="600">Deterministic Pairing</text>
+
+    <!-- SE3 Alignment -->
+    <rect x="15" y="335" width="180" height="135" rx="6" fill="#0d1117" stroke="#58a6ff" stroke-width="1"/>
+    <text x="25" y="360" fill="#58a6ff" font-size="12" font-weight="700">SE(3) Pose Graph</text>
+    <text x="25" y="380" fill="#8b949e" font-size="11">• Lie Algebra Group SE(3)</text>
+    <text x="25" y="397" fill="#8b949e" font-size="11">• T_CD = Inv(T_WC) * T_WD</text>
+    <text x="25" y="414" fill="#8b949e" font-size="11">• Quaternion Slerp (0.05s)</text>
+    <text x="25" y="431" fill="#8b949e" font-size="11">• Common Tactical Frame</text>
+    <rect x="25" y="440" width="160" height="20" rx="4" fill="#1f6feb" opacity="0.2"/>
+    <text x="40" y="454" fill="#58a6ff" font-size="10" font-weight="600">Barfoot Ch. 7 Rigor</text>
+  </g>
+
+  <!-- ARROW 2 -> 3 -->
+  <path d="M 500 340 L 550 340" stroke="#f0f6fc" stroke-width="2" fill="none"/>
+
+  <!-- LAYER 3: 4-TIER FOVEATED MLS ENGINE -->
+  <g transform="translate(550, 95)">
+    <rect width="230" height="490" rx="8" fill="#161b22" stroke="#1f6feb" stroke-width="2"/>
+    <rect width="230" height="36" rx="8" fill="#1f6feb" opacity="0.3"/>
+    <text x="15" y="24" fill="#58a6ff" font-size="14" font-weight="700">3. 4-TIER FOVEATED MLS</text>
+
+    <!-- Foveation Grid Box -->
+    <rect x="15" y="55" width="200" height="120" rx="6" fill="#0d1117" stroke="#3fb950" stroke-width="1"/>
+    <text x="25" y="78" fill="#3fb950" font-size="12" font-weight="700">4-Tier Concentric Grid</text>
+    <text x="25" y="98" fill="#8b949e" font-size="11">• Tier 1 (0-10m): 5 cm Res</text>
+    <text x="25" y="115" fill="#8b949e" font-size="11">• Tier 2 (10-30m): 10 cm Res</text>
+    <text x="25" y="132" fill="#8b949e" font-size="11">• Tier 3 (30-60m): 20 cm Res</text>
+    <text x="25" y="149" fill="#8b949e" font-size="11">• Tier 4 (60-100m): 50 cm Res</text>
+    <text x="25" y="166" fill="#7ee787" font-size="10" font-weight="600">Eliminates &gt;90% redundant cells</text>
+
+    <!-- MLS Slicing Box -->
+    <rect x="15" y="185" width="200" height="135" rx="6" fill="#0d1117" stroke="#7ee787" stroke-width="1.5"/>
+    <text x="25" y="208" fill="#7ee787" font-size="12" font-weight="700">Multi-Level Surface (MLS)</text>
+    <text x="25" y="228" fill="#8b949e" font-size="11">• Triebel Capped Intervals K=3</text>
+    <text x="25" y="245" fill="#8b949e" font-size="11">• Gap Threshold Δz &gt; 1.0 m</text>
+    <text x="25" y="262" fill="#58a6ff" font-size="11" font-weight="600">• 4.5m Bridge Void Preserved</text>
+    <text x="25" y="279" fill="#8b949e" font-size="11">• 18m Church Spire Covered</text>
+    <rect x="25" y="288" width="180" height="22" rx="4" fill="#238636" opacity="0.3"/>
+    <text x="35" y="303" fill="#7ee787" font-size="11" font-weight="700">RAM: 12.16 MB (-99.24%)</text>
+
+    <!-- Tracking & Coasting Box -->
+    <rect x="15" y="330" width="200" height="145" rx="6" fill="#0d1117" stroke="#f85149" stroke-width="1.5"/>
+    <text x="25" y="353" fill="#f85149" font-size="12" font-weight="700">Kalman MTT &amp; Coasting</text>
+    <text x="25" y="373" fill="#8b949e" font-size="11">• Tier-Adaptive DBSCAN</text>
+    <text x="25" y="390" fill="#8b949e" font-size="11">• CWNA Model (q=1.33)</text>
+    <text x="25" y="407" fill="#8b949e" font-size="11">• Hungarian Bipartite Match</text>
+    <text x="25" y="424" fill="#8b949e" font-size="11">• Chi-Square Gate (γ=9.21)</text>
+    <rect x="25" y="435" width="180" height="28" rx="4" fill="#da3633" opacity="0.25"/>
+    <text x="35" y="452" fill="#f85149" font-size="10" font-weight="700">200-Frame Occlusion Coasting</text>
+    <text x="35" y="462" fill="#ff7b72" font-size="9">Locked behind 2.2m Stone Wall</text>
+  </g>
+
+  <!-- ARROW 3 -> 4 -->
+  <path d="M 780 340 L 830 340" stroke="#f0f6fc" stroke-width="2" fill="none"/>
+
+  <!-- LAYER 4: TELEMETRY & TACTICAL INTERFACES -->
+  <g transform="translate(830, 95)">
+    <rect width="240" height="490" rx="8" fill="#161b22" stroke="#30363d" stroke-width="1.5"/>
+    <rect width="240" height="36" rx="8" fill="#21262d"/>
+    <text x="15" y="24" fill="#f0f6fc" font-size="14" font-weight="700">4. TACTICAL CLIENTS &amp; C2</text>
+
+    <!-- Commander C2 Station -->
+    <rect x="15" y="55" width="210" height="95" rx="6" fill="#0d1117" stroke="#58a6ff" stroke-width="1"/>
+    <text x="25" y="78" fill="#58a6ff" font-size="12" font-weight="700">Commander C2 Radar (/c2)</text>
+    <text x="25" y="96" fill="#8b949e" font-size="11">• 20 Hz Top-Down Dynamic Radar</text>
+    <text x="25" y="112" fill="#8b949e" font-size="11">• Real-Time Memory Auditor</text>
+    <text x="25" y="128" fill="#8b949e" font-size="11">• Building Target Designator</text>
+
+    <!-- Soldier AR Visor HUD -->
+    <rect x="15" y="160" width="210" height="95" rx="6" fill="#0d1117" stroke="#3fb950" stroke-width="1"/>
+    <text x="25" y="183" fill="#3fb950" font-size="12" font-weight="700">Soldier AR Visor HUD (Unity)</text>
+    <text x="25" y="201" fill="#8b949e" font-size="11">• MIL-STD-2525 Diamond Reticle</text>
+    <text x="25" y="217" fill="#8b949e" font-size="11">• Range, Speed &amp; [COASTING] Tag</text>
+    <text x="25" y="233" fill="#8b949e" font-size="11">• 4.4m Projected Road Carpet</text>
+
+    <!-- Soldier ATAK Smartphone -->
+    <rect x="15" y="265" width="210" height="95" rx="6" fill="#0d1117" stroke="#a371f7" stroke-width="1"/>
+    <text x="25" y="288" fill="#a371f7" font-size="12" font-weight="700">Soldier ATAK EUD (/soldier)</text>
+    <text x="25" y="306" fill="#8b949e" font-size="11">• Gyroscope Dynamic Compass</text>
+    <text x="25" y="322" fill="#8b949e" font-size="11">• 50m Threat Danger Ring</text>
+    <text x="25" y="338" fill="#8b949e" font-size="11">• Tactical Haptic &amp; Audio Alerts</text>
+
+    <!-- Cursor on Target -->
+    <rect x="15" y="370" width="210" height="105" rx="6" fill="#0d1117" stroke="#d29922" stroke-width="1"/>
+    <text x="25" y="393" fill="#d29922" font-size="12" font-weight="700">Cursor-on-Target (/api/cot)</text>
+    <text x="25" y="411" fill="#8b949e" font-size="11">• WGS-84 Ellipsoidal Geodesy</text>
+    <text x="25" y="427" fill="#8b949e" font-size="11">• MIL-STD-2525D 'a-h-G-U-C'</text>
+    <text x="25" y="443" fill="#8b949e" font-size="11">• Interoperable with WinTAK/ATAK</text>
+    <text x="25" y="459" fill="#e3b341" font-size="10" font-weight="600">Standard Defense C4ISR Protocol</text>
+  </g>
+</svg>

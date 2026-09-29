@@ -51,13 +51,14 @@ class FoveatedGrid:
         self.num_tiers = len(self.tier_radii_list)
 
     def partition(
-        self, points: torch.Tensor
+        self, points: torch.Tensor, origin: Optional[Tuple[float, float]] = None
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
         """
         Vectorized loop-free partitioning of point clouds.
 
         Args:
             points: (N, 3) or (N, 4) float tensor of [X, Y, Z] or [X, Y, Z, SemanticID]
+            origin: Optional (X, Y) tuple for ego-centric radial distance calculation. Defaults to (0, 0).
 
         Returns:
             valid_mask: (N,) boolean mask of points within max range
@@ -74,13 +75,21 @@ class FoveatedGrid:
         x = points[:, 0]
         y = points[:, 1]
 
+        ox, oy = (origin[0], origin[1]) if origin is not None else (0.0, 0.0)
+        dx = x - ox
+        dy = y - oy
+
         # 1. Zero-crossing stabilization guard
-        # Prevents asymmetric rounding around (0, 0)
+        # Prevents asymmetric rounding around origin
         x_clamped = torch.where(torch.abs(x) < ZERO_CROSSING_EPSILON, torch.zeros_like(x), x)
         y_clamped = torch.where(torch.abs(y) < ZERO_CROSSING_EPSILON, torch.zeros_like(y), y)
+        dx = x_clamped - ox
+        dy = y_clamped - oy
+        dx_clamped = torch.where(torch.abs(dx) < ZERO_CROSSING_EPSILON, torch.zeros_like(dx), dx)
+        dy_clamped = torch.where(torch.abs(dy) < ZERO_CROSSING_EPSILON, torch.zeros_like(dy), dy)
 
-        # 2. Euclidean radial distance calculation
-        r = torch.sqrt(x_clamped ** 2 + y_clamped ** 2)
+        # 2. Euclidean radial distance calculation relative to sensor origin
+        r = torch.sqrt(dx_clamped ** 2 + dy_clamped ** 2)
 
         # Filter out out-of-range points (beyond Tier 4 outer boundary)
         valid_mask = r <= self.tier_radii_list[-1]

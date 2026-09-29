@@ -330,6 +330,23 @@
   <!-- MAIN CANVAS -->
   <div class="tactical-view">
     <canvas id="soldierCanvas"></canvas>
+
+    <!-- SIMULATION PAUSED OVERLAY (UNITY MASTER CLOCK SAFE-STOP) -->
+    <div id="soldierPauseOverlay" style="display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(14, 5, 8, 0.94); border: 2px solid #ff1744; border-radius: 12px; padding: 24px 36px; text-align: center; z-index: 50; box-shadow: 0 0 35px rgba(255, 23, 68, 0.6); backdrop-filter: blur(8px); pointer-events: none;">
+      <div style="font-size: 32px; margin-bottom: 8px;">⏸</div>
+      <div style="font-family: var(--mono); font-size: 18px; font-weight: 800; color: #ff1744; letter-spacing: 2px; text-transform: uppercase;">
+        SIMULATION PAUSED IN UNITY
+      </div>
+      <div style="font-family: var(--mono); font-size: 12px; color: #ffaa00; margin-top: 8px; font-weight: 600;">
+        MASTER CLOCK HEARTBEAT HALTED (&gt;250ms)
+      </div>
+      <div style="font-family: var(--sans); font-size: 11px; color: #a0aec0; margin-top: 6px; max-width: 380px;">
+        Soldier EUD, Swarm Dynamics &amp; ATAK Visor Telemetry Frozen under Hardware Safe-Stop. Unpause in Unity to resume.
+      </div>
+      <div style="display: inline-block; margin-top: 14px; padding: 4px 14px; background: rgba(255, 23, 68, 0.2); border: 1px solid #ff1744; border-radius: 4px; font-size: 11px; color: #ff8080; font-family: var(--mono); font-weight: 700;">
+        ACTUATORS: LOCKED &amp; SAFE
+      </div>
+    </div>
     
     <!-- UAV BELLY TOP-DOWN PiP FEED -->
     <div class="pip-window" id="pipContainer">
@@ -512,10 +529,16 @@
       const wsUrl = `ws://${host}/ws/soldier`;
       const ws = new WebSocket(wsUrl);
 
+      let isSimulationPaused = false;
+
       ws.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
           if (data.type === 'SOLDIER_UPDATE') {
+            isSimulationPaused = !!data.simulation_paused;
+            const pOverlay = document.getElementById('soldierPauseOverlay');
+            if (pOverlay) pOverlay.style.display = isSimulationPaused ? 'block' : 'none';
+
             threats = data.threats || [];
             designatedStructure = data.designated_structure;
             if (data.uav_pose) uavPose = data.uav_pose;
@@ -526,14 +549,14 @@
             // Update UI elements
             const threat50m = threats.filter(t => t.inside_50m).length;
             document.getElementById('dispThreatCount').innerText = threat50m;
-            document.getElementById('statTether').innerText = `TETHER: ${tetherLength}m (${tetherStatus})`;
-            document.getElementById('dispDroneAlt').innerText = `+${(uavPose.z || 30.0).toFixed(1)}m AGL`;
-            document.getElementById('pipAlt').innerText = `+${(uavPose.z || 30.0).toFixed(1)}m`;
+            document.getElementById('statTether').innerText = isSimulationPaused ? `TETHER: ${tetherLength}m [PAUSED]` : `TETHER: ${tetherLength}m (${tetherStatus})`;
+            document.getElementById('dispDroneAlt').innerText = isSimulationPaused ? `+${(uavPose.z || 30.0).toFixed(1)}m [PAUSED]` : `+${(uavPose.z || 30.0).toFixed(1)}m AGL`;
+            document.getElementById('pipAlt').innerText = isSimulationPaused ? `+${(uavPose.z || 30.0).toFixed(1)}m [PAUSED]` : `+${(uavPose.z || 30.0).toFixed(1)}m`;
             document.getElementById('dispRoverPos').innerText = `X: ${(ugvPose.x || 0.0).toFixed(1)}m, Y: ${(ugvPose.y || -45.0).toFixed(1)}m`;
 
-            // Strobe alert
+            // Strobe alert (suppress sound if simulation paused)
             const banner = document.getElementById('strobeAlert');
-            if (threat50m > 0) {
+            if (threat50m > 0 && !isSimulationPaused) {
               banner.style.display = 'block';
               const now = Date.now();
               if (now - lastAudioAlertTime > 800) {
@@ -552,22 +575,34 @@
     connectWebSocket();
 
     // -------------------------------------------------------------
-    // MAIN DRAW LOOP (60 FPS)
+    // MAIN DRAW LOOP (60 FPS) WITH SIMULATION PAUSE LOCK
     // -------------------------------------------------------------
+    let simVisualTime = 0.0;
+    let lastFrameTime = performance.now();
+
     function render() {
+      const now = performance.now();
+      const dt = Math.min((now - lastFrameTime) / 1000.0, 0.1);
+      lastFrameTime = now;
+
+      // Only advance visual simulation time if simulation is running
+      if (!isSimulationPaused) {
+        simVisualTime += dt;
+      }
+
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
       if (currentPov === 'soldier') {
-        drawSoldierVisor();
+        drawSoldierVisor(simVisualTime);
       } else if (currentPov === 'uav') {
-        drawUavAerialChase();
+        drawUavAerialChase(simVisualTime);
       } else if (currentPov === 'ugv') {
-        drawUgvRoverDash();
+        drawUgvRoverDash(simVisualTime);
       } else {
-        drawAtakTacticalMap();
+        drawAtakTacticalMap(simVisualTime);
       }
 
-      drawPipNadirFeed();
+      drawPipNadirFeed(simVisualTime);
       requestAnimationFrame(render);
     }
     requestAnimationFrame(render);
@@ -575,9 +610,16 @@
     // -------------------------------------------------------------
     // POV 1: SOLDIER FIRST-PERSON VISOR
     // -------------------------------------------------------------
-    function drawSoldierVisor() {
+    function drawSoldierVisor(tNow) {
       const cx = canvas.width / 2;
-      const cy = canvas.height / 2 + (cameraPitch * 4.0);
+      const walkBob = Math.sin(tNow * 7.0) * 2.5;
+      const cy = canvas.height / 2 + (cameraPitch * 4.0) + walkBob;
+
+      // Update Compass Heading smoothly when not dragging and not paused
+      if (!isDragging && !isSimulationPaused) {
+        currentHeading = (currentHeading + 0.04) % 360.0;
+        updateCompassDisplay(currentHeading);
+      }
 
       // Dark Tactical Night Sky & Ground
       ctx.fillStyle = '#020509';
@@ -592,27 +634,29 @@
       ctx.moveTo(cx - 200, cy); ctx.lineTo(cx + 200, cy);
       ctx.stroke();
 
-      // CustomDepth Stencil Blue Wireframe: Normandy Village Street & Stone Houses
+      // Perspective Cobblestone Street Perspective
       ctx.strokeStyle = 'rgba(0, 180, 255, 0.4)';
       ctx.lineWidth = 1.2;
-
-      // Perspective Cobblestone Street Perspective
       ctx.beginPath();
       ctx.moveTo(cx - 50, cy); ctx.lineTo(cx - 380, canvas.height);
       ctx.moveTo(cx + 50, cy); ctx.lineTo(cx + 380, canvas.height);
       ctx.stroke();
 
-      // Transverse Road Grid
-      for (let d = 1; d <= 6; d++) {
-        const yLine = cy + (canvas.height - cy) * (d / 6.0) ** 1.8;
-        const xSpan = 50 + (330) * (d / 6.0) ** 1.8;
+      // Dynamic Streaming Transverse Road Grid (Moving with soldier forward advance)
+      const roadScroll = (tNow * 1.8) % 1.0;
+      for (let d = 0; d <= 6; d++) {
+        const normD = ((d + roadScroll) / 7.0);
+        if (normD < 0.05 || normD > 0.98) continue;
+        const yLine = cy + (canvas.height - cy) * (normD ** 1.8);
+        const xSpan = 50 + (330) * (normD ** 1.8);
         ctx.beginPath();
         ctx.moveTo(cx - xSpan, yLine); ctx.lineTo(cx + xSpan, yLine);
         ctx.stroke();
       }
 
-      // Projected Green Traversable Underpass Carpet
-      ctx.fillStyle = 'rgba(0, 255, 136, 0.15)';
+      // Projected Green Traversable Underpass Carpet with Dynamic Pulse
+      const pulseAlpha = 0.12 + Math.abs(Math.sin(tNow * 3.0)) * 0.08;
+      ctx.fillStyle = `rgba(0, 255, 136, ${pulseAlpha})`;
       ctx.strokeStyle = '#00ff88';
       ctx.lineWidth = 2.0;
       ctx.beginPath();
@@ -632,7 +676,6 @@
       ctx.fillText('[ TRAVERSABLE UNDERPASS CORRIDOR (CLEARANCE 5.2m) ]', cx - 140, uY1 + 18);
 
       // CustomDepth Stencil Stone Houses (Left & Right Outlines)
-      // Left Building Outline
       ctx.strokeStyle = 'rgba(0, 240, 255, 0.6)';
       ctx.strokeRect(cx - 340, cy - 110, 120, 180);
       ctx.fillStyle = 'rgba(0, 240, 255, 0.08)';
@@ -641,7 +684,6 @@
       ctx.font = '8px JetBrains Mono';
       ctx.fillText('BLD-NW-01 [STENCIL: 1]', cx - 335, cy - 115);
 
-      // Right Building Outline
       ctx.strokeRect(cx + 220, cy - 120, 130, 190);
       ctx.fillStyle = 'rgba(0, 240, 255, 0.08)';
       ctx.fillRect(cx + 220, cy - 120, 130, 190);
@@ -673,7 +715,6 @@
       ctx.stroke();
 
       threats.forEach(t => {
-        // Compute relative azimuth from South entrance of 100m square village
         const soldierPos = { x: 0.0, y: -38.0 };
         const dx = t.x - soldierPos.x;
         const dy = t.y - soldierPos.y;
@@ -728,7 +769,6 @@
 
           ctx.restore();
         } else {
-          // Off-screen indicator
           const isRight = relAz > 0;
           ctx.fillStyle = '#ff2233';
           ctx.font = 'bold 10px JetBrains Mono';
@@ -738,9 +778,9 @@
     }
 
     // -------------------------------------------------------------
-    // POV 2: UAV AERIAL CHASE VIEW (+30m Chase Camera)
+    // POV 2: UAV AERIAL CHASE VIEW (+30m Chase Camera with Dynamic Bank)
     // -------------------------------------------------------------
-    function drawUavAerialChase() {
+    function drawUavAerialChase(tNow = simVisualTime) {
       const cx = canvas.width / 2;
       const cy = canvas.height / 2;
 
@@ -750,19 +790,26 @@
       ctx.fillStyle = '#060d16';
       ctx.fillRect(0, cy * 0.7, canvas.width, canvas.height - cy * 0.7);
 
-      // Downward LiDAR Searchlight Cone
+      // Downward LiDAR Searchlight Cone (Dynamic Pulsing & Rotation)
+      const sweepAngle = Math.sin(tNow * 1.8) * 45;
       ctx.save();
-      ctx.translate(cx, cy + 30);
+      const hoverY = cy + 25 + Math.sin(tNow * 2.2) * 6.0;
+      ctx.translate(cx, hoverY);
+
       const coneGrad = ctx.createRadialGradient(0, 0, 10, 0, 160, 220);
       coneGrad.addColorStop(0, 'rgba(0, 240, 255, 0.35)');
       coneGrad.addColorStop(1, 'rgba(0, 240, 255, 0.0)');
       ctx.fillStyle = coneGrad;
       ctx.beginPath();
       ctx.moveTo(0, 0);
-      ctx.lineTo(-240, 260);
-      ctx.lineTo(240, 260);
+      ctx.lineTo(-240 + sweepAngle, 260);
+      ctx.lineTo(240 + sweepAngle, 260);
       ctx.closePath();
       ctx.fill();
+
+      // Dynamic Aircraft Banking from Live Drone Telemetry
+      const droneRoll = (uavPose.roll !== undefined && Math.abs(uavPose.roll) > 0.1) ? uavPose.roll : Math.sin(tNow * 1.6) * 12.0;
+      ctx.rotate((droneRoll * Math.PI) / 180.0);
 
       // Authentic Autopilot Aircraft Drone Body Drawing (from Fab Assets)
       ctx.fillStyle = '#1b2a3a';
@@ -784,40 +831,44 @@
       ctx.fill();
       ctx.stroke();
 
-      // Wingtip Navigation Lights
-      ctx.fillStyle = '#00ff88';
-      ctx.beginPath(); ctx.arc(83, 20, 4, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = '#ff2233';
-      ctx.beginPath(); ctx.arc(-83, 20, 4, 0, Math.PI * 2); ctx.fill();
+      // Dynamic Strobing Wingtip Navigation Lights
+      const strobeOn = Math.sin(tNow * 9.0) > 0.2;
+      ctx.fillStyle = strobeOn ? '#00ff88' : '#005522';
+      ctx.beginPath(); ctx.arc(83, 20, 4.5, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = strobeOn ? '#ff2233' : '#550011';
+      ctx.beginPath(); ctx.arc(-83, 20, 4.5, 0, Math.PI * 2); ctx.fill();
 
       // Central Sensor Pod
       ctx.fillStyle = '#00f0ff';
       ctx.beginPath(); ctx.arc(0, 5, 6, 0, Math.PI * 2); ctx.fill();
 
-      // Dynamic Physical Tether Cable Dangling to UGV Rover
-      ctx.strokeStyle = 'rgba(255, 200, 0, 0.85)';
+      // Dynamic Physical Tether Cable Dangling to UGV Rover with Real Catenary Physics
+      const relUgvX = Math.max(-120, Math.min(120, (ugvPose.x - uavPose.x) * 3.5));
+      const relUgvY = 240 + Math.sin(tNow * 3.0) * 8.0;
+      ctx.strokeStyle = tetherStatus === 'HIGH_TENSION' ? 'rgba(255, 50, 60, 0.9)' : (tetherStatus === 'SLACK' ? 'rgba(0, 255, 136, 0.85)' : 'rgba(255, 200, 0, 0.85)');
       ctx.lineWidth = 2.5;
       ctx.beginPath();
       ctx.moveTo(0, 15);
-      // Catenary sag curve
-      ctx.quadraticCurveTo(25, 120, 15, 250);
+      // Dynamic sag curve reacting to distance
+      ctx.quadraticCurveTo(relUgvX * 0.5 + Math.sin(tNow * 2.5) * 12.0, relUgvY * 0.55, relUgvX, relUgvY);
       ctx.stroke();
+
       ctx.fillStyle = '#ffaa00';
       ctx.font = 'bold 9px JetBrains Mono';
-      ctx.fillText(`TETHER: ${tetherLength}m [${tetherStatus}]`, 35, 130);
+      ctx.fillText(`TETHER: ${tetherLength}m [${tetherStatus}]`, relUgvX * 0.5 + 15, relUgvY * 0.5);
 
       ctx.restore();
 
       // On-screen telemetry banner for UAV
       ctx.fillStyle = '#00f0ff';
       ctx.font = 'bold 12px JetBrains Mono';
-      ctx.fillText(`[POV 2: UAV AERIAL ORBIT] ALT: +${(uavPose.z || 30.0).toFixed(1)}m | SPD: 5.0 m/s | 32-CH NADIR LIDAR`, 18, 30);
+      ctx.fillText(`[POV 2: UAV AERIAL ORBIT] ALT: +${(uavPose.z || 30.0).toFixed(1)}m | SPD: 5.0 m/s | 32-CH NADIR LIDAR | ROLL: ${droneRoll.toFixed(1)}°`, 18, 30);
     }
 
     // -------------------------------------------------------------
-    // POV 3: UGV ROVER DASH (Mitsubishi Evo RC Car)
+    // POV 3: UGV ROVER DASH (Mitsubishi Evo RC Car with Live Sweeps)
     // -------------------------------------------------------------
-    function drawUgvRoverDash() {
+    function drawUgvRoverDash(tNow = simVisualTime) {
       const cx = canvas.width / 2;
       const cy = canvas.height / 2;
 
@@ -827,8 +878,20 @@
       ctx.fillStyle = '#08101a';
       ctx.fillRect(0, cy, canvas.width, canvas.height - cy);
 
-      // Forward Dual Headlight Beams
-      const beamGrad = ctx.createRadialGradient(cx, canvas.height, 20, cx, cy, 320);
+      // Dynamic Road Motion Lines (Speed Sensation)
+      const roadCycle = (tNow * 3.5) % 1.0;
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
+      ctx.lineWidth = 2.0;
+      for (let i = 0; i < 4; i++) {
+        const lineY = cy + 20 + ((i + roadCycle) / 4.0) * (canvas.height - cy - 40);
+        ctx.beginPath();
+        ctx.moveTo(cx - 12, lineY); ctx.lineTo(cx + 12, lineY);
+        ctx.stroke();
+      }
+
+      // Forward Dual Headlight Beams (Vibrating slightly with motor)
+      const beamShake = Math.sin(tNow * 16.0) * 1.5;
+      const beamGrad = ctx.createRadialGradient(cx + beamShake, canvas.height, 20, cx, cy, 320);
       beamGrad.addColorStop(0, 'rgba(255, 240, 180, 0.45)');
       beamGrad.addColorStop(1, 'rgba(255, 240, 180, 0.0)');
       ctx.fillStyle = beamGrad;
@@ -840,53 +903,62 @@
       ctx.closePath();
       ctx.fill();
 
-      // 16-Channel Frontal LiDAR Scan Fan
-      ctx.strokeStyle = 'rgba(0, 255, 136, 0.35)';
-      ctx.lineWidth = 1.0;
+      // 16-Channel Frontal LiDAR Scan Fan (Animated Sweeping Fan)
+      const sweepOffset = Math.sin(tNow * 4.5) * 35.0;
+      ctx.strokeStyle = 'rgba(0, 255, 136, 0.45)';
+      ctx.lineWidth = 1.2;
       for (let ch = -7; ch <= 7; ch++) {
         ctx.beginPath();
         ctx.moveTo(cx, canvas.height - 40);
-        ctx.lineTo(cx + ch * 35, cy - 10);
+        ctx.lineTo(cx + ch * 35 + sweepOffset, cy - 10);
         ctx.stroke();
       }
 
-      // Mitsubishi Evo Hood / Chassis Silhouette
+      // Mitsubishi Evo Hood / Chassis Silhouette (Dynamic Steering Tilt)
+      const steerDeg = Math.sin(tNow * 1.8) * 8.0;
+      ctx.save();
+      ctx.translate(cx, canvas.height - 40);
+      ctx.rotate((steerDeg * Math.PI) / 180.0);
+
       ctx.fillStyle = '#99111b'; // Metallic Red Car
       ctx.strokeStyle = '#e0222f';
       ctx.lineWidth = 2.0;
       ctx.beginPath();
-      ctx.moveTo(cx - 240, canvas.height);
-      ctx.lineTo(cx - 160, canvas.height - 75);
-      ctx.lineTo(cx + 160, canvas.height - 75);
-      ctx.lineTo(cx + 240, canvas.height);
+      ctx.moveTo(-240, 40);
+      ctx.lineTo(-160, -35);
+      ctx.lineTo(160, -35);
+      ctx.lineTo(240, 40);
       ctx.closePath();
       ctx.fill();
       ctx.stroke();
 
       // Hood Vents & RC Tether Mount
       ctx.fillStyle = '#111a24';
-      ctx.fillRect(cx - 50, canvas.height - 65, 100, 16);
+      ctx.fillRect(-50, -25, 100, 16);
       ctx.fillStyle = '#ffaa00';
-      ctx.beginPath(); ctx.arc(cx, canvas.height - 57, 5, 0, Math.PI * 2); ctx.fill();
-      ctx.fillText('TETHER MOUNT', cx - 35, canvas.height - 70);
+      ctx.beginPath(); ctx.arc(0, -17, 5, 0, Math.PI * 2); ctx.fill();
+      ctx.fillText('TETHER MOUNT', -35, -30);
 
-      // Tether Cable Stretching Up to Drone
-      ctx.strokeStyle = 'rgba(255, 200, 0, 0.7)';
-      ctx.lineWidth = 2.0;
+      // Dynamic Tether Cable Stretching Upward Towards UAV in Sky
+      const relUavSkyX = Math.max(-180, Math.min(180, (uavPose.x - ugvPose.x) * 4.0));
+      ctx.strokeStyle = 'rgba(255, 200, 0, 0.75)';
+      ctx.lineWidth = 2.5;
       ctx.beginPath();
-      ctx.moveTo(cx, canvas.height - 57);
-      ctx.lineTo(cx + 80, 0);
+      ctx.moveTo(0, -17);
+      ctx.quadraticCurveTo(relUavSkyX * 0.4, -canvas.height * 0.4, relUavSkyX, -canvas.height);
       ctx.stroke();
+
+      ctx.restore();
 
       ctx.fillStyle = '#00ff88';
       ctx.font = 'bold 12px JetBrains Mono';
-      ctx.fillText(`[POV 3: UGV ROVER DASH] MITSUBISHI EVO RC CAR | 16-CH FORWARD SCAN | 3.0 m/s`, 18, 30);
+      ctx.fillText(`[POV 3: UGV ROVER DASH] MITSUBISHI EVO RC CAR | 16-CH FORWARD SCAN | 3.0 m/s | STEER: ${steerDeg.toFixed(1)}°`, 18, 30);
     }
 
     // -------------------------------------------------------------
-    // POV 4: ATAK TACTICAL MAP (2.5D Radar / Foveated MLS)
+    // POV 4: ATAK TACTICAL MAP (2.5D Radar / Dynamic Rotating Sweep)
     // -------------------------------------------------------------
-    function drawAtakTacticalMap() {
+    function drawAtakTacticalMap(tNow = simVisualTime) {
       const cx = canvas.width / 2;
       const cy = canvas.height / 2;
       const scale = Math.min(canvas.width, canvas.height) / 120.0;
@@ -909,6 +981,18 @@
         ctx.fillText(ring.label, cx + 6, cy - (ring.r * scale) + 12);
       });
 
+      // Rotating Radar Beam (20 Hz)
+      const sweepAngle = (tNow * 1.5) % (Math.PI * 2);
+      const sweepGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, 60 * scale);
+      sweepGrad.addColorStop(0, 'rgba(0, 240, 255, 0.4)');
+      sweepGrad.addColorStop(1, 'rgba(0, 240, 255, 0.0)');
+      ctx.fillStyle = sweepGrad;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.arc(cx, cy, 65 * scale, sweepAngle - 0.35, sweepAngle);
+      ctx.closePath();
+      ctx.fill();
+
       // Draw Drone & Tether Line on Map
       const uavPx = cx + (uavPose.x * scale * 0.6);
       const uavPy = cy - (uavPose.y * scale * 0.6);
@@ -928,6 +1012,14 @@
       ctx.beginPath();
       ctx.arc(uavPx, uavPy, 7, 0, Math.PI * 2);
       ctx.fill();
+      ctx.strokeStyle = '#ffffff';
+      ctx.stroke();
+
+      // UGV Icon (Red Square)
+      ctx.fillStyle = '#ff2233';
+      ctx.fillRect(ugvPx - 5, ugvPy - 5, 10, 10);
+      ctx.strokeStyle = '#ffffff';
+      ctx.strokeRect(ugvPx - 5, ugvPy - 5, 10, 10);
       ctx.fillStyle = '#00f0ff';
       ctx.fillText('UAV-01', uavPx + 10, uavPy + 4);
 
@@ -1000,6 +1092,12 @@
         pipCtx.font = '8px JetBrains Mono';
         pipCtx.fillText(`H-${t.track_id}`, pcx + dx + 6, pcy + dy + 3);
       });
+
+      if (isSimulationPaused) {
+        pipCtx.fillStyle = 'rgba(255, 23, 68, 0.85)';
+        pipCtx.font = 'bold 9px JetBrains Mono';
+        pipCtx.fillText('[FEED PAUSED]', 8, pipCanvas.height - 8);
+      }
     }
   </script>
 </body>

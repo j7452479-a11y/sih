@@ -296,6 +296,15 @@
 
   <div class="main-container">
     <div class="canvas-wrapper">
+      <!-- High-visibility Simulation Pause Overlay -->
+      <div id="pauseOverlay" style="display:none; position:absolute; top:20px; left:50%; transform:translateX(-50%); background:rgba(20,6,10,0.95); border:2px solid #ff1744; box-shadow:0 0 35px rgba(255,23,68,0.7); border-radius:8px; padding:12px 24px; text-align:center; z-index:100; pointer-events:none;">
+        <div style="font-size:18px; font-weight:900; color:#ff1744; letter-spacing:2px; display:flex; align-items:center; justify-content:center; gap:8px;">
+          <span>⏸</span> SIMULATION PAUSED IN UNITY
+        </div>
+        <div style="font-size:11px; color:#ffffff; margin-top:4px; font-family:'JetBrains Mono',monospace;">
+          Master Clock Halted (&gt;250ms) | Edge Hardware Safe-Stop Active | Actuators Frozen
+        </div>
+      </div>
       <canvas id="tacticalCanvas"></canvas>
       <div class="canvas-hud-overlay">
         <div class="legend-item"><div class="dot" style="background: #00f0ff;"></div><span>T1 (5cm)</span></div>
@@ -604,6 +613,7 @@
     let liveUgvPose = { x: 0.0, y: -45.0, z: 0.05, yaw: 90.0 };
     let liveTetherLength = 18.2;
     let liveTetherStatus = "NOMINAL";
+    let isSimPaused = false;
 
     // WebSocket Telemetry Connection
     const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -614,22 +624,31 @@
       try {
         const msg = JSON.parse(event.data);
         if (msg.type === 'C2_UPDATE') {
-          cellsData = msg.cells || [];
+          isSimPaused = !!msg.simulation_paused;
+          const pOverlay = document.getElementById('pauseOverlay');
+          if (pOverlay) pOverlay.style.display = isSimPaused ? 'block' : 'none';
+
+          if (msg.cells && msg.cells.length > 0) {
+            cellsData = msg.cells;
+          }
           tracksData = msg.tracks || [];
+          if (isSimPaused) {
+            tracksData.forEach(t => { t.speed = 0.0; });
+          }
           if (msg.uav_pose) liveUavPose = msg.uav_pose;
           if (msg.ugv_pose) liveUgvPose = msg.ugv_pose;
           if (msg.tether_length_m) liveTetherLength = msg.tether_length_m;
           if (msg.tether_status) liveTetherStatus = msg.tether_status;
 
-          document.getElementById('hudFps').innerText = `${msg.fps} FPS`;
-          document.getElementById('hudLatency').innerText = `${msg.latency_ms} MS`;
+          document.getElementById('hudFps').innerText = isSimPaused ? "0.0 FPS [PAUSED]" : `${msg.fps} FPS`;
+          document.getElementById('hudLatency').innerText = isSimPaused ? "-- MS" : `${msg.latency_ms} MS`;
           document.getElementById('hudCells').innerText = msg.cell_count;
           document.getElementById('trackCountBadge').innerText = tracksData.length;
           renderHostileList(tracksData);
 
           const badge = document.getElementById('liveBadge');
           if (badge) {
-            if (msg.simulation_paused) {
+            if (isSimPaused) {
               badge.innerText = "CRITICAL: SIMULATION PAUSED - HARDWARE HALTED";
               badge.style.background = "rgba(255, 23, 68, 0.35)";
               badge.style.color = "#ff1744";
@@ -967,6 +986,15 @@
           ctx.fillStyle = '#00f0ff';
           ctx.fillText(`Survey Box: ${lM}m × ${wM}m`, x + 5, y - 6 > 15 ? y - 6 : y + 14);
         }
+      }
+
+      if (isSimPaused) {
+        ctx.fillStyle = 'rgba(255, 23, 68, 0.12)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.fillStyle = '#ff1744';
+        ctx.font = 'bold 12px JetBrains Mono';
+        ctx.fillText('[ ⏸ SIMULATION PAUSED IN UNITY — HARDWARE ACTUATORS LOCKED ]', 20, canvas.height - 20);
       }
 
       requestAnimationFrame(draw);
