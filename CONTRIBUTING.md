@@ -1,6 +1,7 @@
-# Contributing to Tactical Edge Perception Engine (SIH26053)
+# Contributing to Project F.L.A.R.E. (SIH26053)
+### **Foveated LiDAR Architecture for Robotic Edge-perception**
 
-Thank you for your interest in contributing to the **Tactical Edge Perception Engine & Civilian EV Simulation** project! This repository contains a production-grade, mathematically grounded perception pipeline coupled with a high-fidelity Unity 6 tactical simulation environment.
+Thank you for your interest in contributing to **Project F.L.A.R.E. (Foveated LiDAR Architecture for Robotic Edge-perception)**! This repository contains a production-grade, mathematically grounded perception pipeline coupled with a high-fidelity Unity 6 tactical simulation environment.
 
 ---
 

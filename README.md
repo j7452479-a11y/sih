@@ -1,8 +1,10 @@
-# 🛡️ Tactical Edge Perception Engine & Autonomous EV Simulation
+# 🔥 Project F.L.A.R.E. (SIH26053)
+### **Foveated LiDAR Architecture for Robotic Edge-perception**
 
 > **Ultra-Low-Latency, SWaP-Constrained 4-Tier Foveated 2.5D LiDAR Mapping, Multi-Level Surface (MLS) Void Preservation & Dynamic Multi-Target Perception for Contested MUM-T Defense and Autonomous Electric Vehicles**
 
 [![CI Pipeline](https://github.com/j7452479-a11y/sih/actions/workflows/ci.yml/badge.svg)](https://github.com/j7452479-a11y/sih/actions/workflows/ci.yml)
+[![Project F.L.A.R.E.](https://img.shields.io/badge/Project-F.L.A.R.E.-FF5722.svg?logo=flame&logoColor=white)](https://github.com/j7452479-a11y/sih)
 [![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-3776AB.svg?logo=python&logoColor=white)](https://www.python.org/)
 [![Unity 6](https://img.shields.io/badge/Simulation-Unity%206%20URP-000000.svg?logo=unity&logoColor=white)](https://unity.com/)
 [![PyTorch 2.2+](https://img.shields.io/badge/Deep%20Learning-PyTorch-EE4C2C.svg?logo=pytorch&logoColor=white)](https://pytorch.org/)
@@ -72,7 +74,7 @@ Tactical edge platforms (e.g., NVIDIA Jetson Orin Nano, Xavier NX) operate under
 ```
 
 ### The Foveated MLS Breakthrough
-Our engine integrates a **4-Tier Concentric Foveated Multi-Level Surface (MLS)** representation:
+**Project F.L.A.R.E. (Foveated LiDAR Architecture for Robotic Edge-perception)** delivers an asymmetric breakthrough via a **4-Tier Concentric Foveated Multi-Level Surface (MLS)** representation:
 - **Variable-Resolution Foveation:** Scales cell size from $5\text{ cm}$ in the near field ($0\text{–}10\text{ m}$) to $50\text{ cm}$ in the far field ($60\text{–}100\text{ m}$), eliminating $>90\%$ of redundant cells.
 - **Capped Vertical Intervals ($K=3$):** Discretizes columns into up to 3 distinct vertical intervals per cell, preserving the traversable void space beneath bridges and overhanging foliage.
 - **Empirical Edge Optimization:** Cuts peak RAM from **$1,600\text{ MB}$ to $12.16\text{ MB}$ ($>99.24\%$ reduction)** while executing deterministically in **$< 10\text{ ms}$ at $\ge 20\text{ Hz}$**.

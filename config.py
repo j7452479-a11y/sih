@@ -1,5 +1,6 @@
 """
-Tactical Edge Perception Engine (SIH26053)
+Project F.L.A.R.E. (SIH26053)
+Foveated LiDAR Architecture for Robotic Edge-perception
 Master Configuration Module
 """
 

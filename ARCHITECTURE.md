@@ -1,6 +1,8 @@
 # System Architecture Specification
 
-## Tactical Edge Perception Engine & Civilian EV Simulation (SIH26053)
+# 🔥 Project F.L.A.R.E. (SIH26053)
+## **Foveated LiDAR Architecture for Robotic Edge-perception**
+*Dual-Domain Deployment: Contested Tactical MUM-T Defense & Autonomous Civilian EV*
 
 ---
 
